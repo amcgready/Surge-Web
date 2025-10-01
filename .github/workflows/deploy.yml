@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -14,36 +15,50 @@ jobs:
         with:
           fetch-depth: 1
 
-      # Uncomment if you build (React/Vite/etc) and change local-dir below
+      # If you build (React/Vite/etc), uncomment and change local-dir to ./dist in the deploy step
       # - name: Build
       #   run: |
       #     npm ci
       #     npm run build
 
-      - name: Preflight SSH check (list target)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SFTP_HOST }}
-          port: ${{ secrets.SFTP_PORT }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}   # use the secret directly
-          timeout: 60s
-          command_timeout: 5m
-          script: |
-            echo "Target: ${{ secrets.SFTP_TARGET }}"
-            mkdir -p "${{ secrets.SFTP_TARGET }}"
-            ls -la "${{ secrets.SFTP_TARGET }}"
+      - name: Write SSH key and known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SFTP_HOST }}    # set this to the **server hostname**
+          SSH_PORT: ${{ secrets.SFTP_PORT }}    # set this to the **SSH port from cPanel**
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # trust host key; required for raw ssh preflight
+          ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Raw SSH preflight (prove network + auth before actions)
+        env:
+          SSH_HOST: ${{ secrets.SFTP_HOST }}
+          SSH_PORT: ${{ secrets.SFTP_PORT }}
+          SSH_USER: ${{ secrets.SFTP_USERNAME }}
+        run: |
+          ssh -o BatchMode=yes -p "${SSH_PORT}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" 'echo ok && whoami && pwd'
+
+      - name: Preflight list on target
+        env:
+          SSH_HOST: ${{ secrets.SFTP_HOST }}
+          SSH_PORT: ${{ secrets.SFTP_PORT }}
+          SSH_USER: ${{ secrets.SFTP_USERNAME }}
+          TARGET:   ${{ secrets.SFTP_TARGET }}
+        run: |
+          ssh -o BatchMode=yes -p "${SSH_PORT}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" "mkdir -p '${TARGET}' && ls -la '${TARGET}'"
 
       - name: SFTP deploy via SSH key
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.SFTP_HOST }}
-          port: ${{ secrets.SFTP_PORT }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}       # server hostname
+          port: ${{ secrets.SFTP_PORT }}         # SSH port from cPanel
+          username: ${{ secrets.SFTP_USERNAME }} # cPanel username
           protocol: sftp
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           local-dir: ./            # change to ./dist if you built above
-          server-dir: ${{ secrets.SFTP_TARGET }}
+          server-dir: ${{ secrets.SFTP_TARGET }} # e.g. /home/<cpanel_user>/surge.video
           dangerous-clean-slate: false
           log-level: verbose
           exclude: |
