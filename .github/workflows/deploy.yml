@@ -2,7 +2,7 @@ name: Deploy surge.video (SFTP)
 
 on:
   push:
-    branches: [ "public" ]   # only deploy when pushing to the public branch
+    branches: [ "main" ]   # only deploy when pushing to the public branch
 
 jobs:
   deploy:
