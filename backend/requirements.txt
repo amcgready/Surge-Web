@@ -1,0 +1,12 @@
+flask>=2.3.0
+flask-cors>=4.0.0
+flask-socketio>=5.3.0
+PyJWT>=2.8.0
+PyYAML>=6.0
+python-socketio>=5.8.0
+eventlet>=0.33.0
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+flask-sqlalchemy>=3.0.0
+bcrypt>=4.0.0
+cryptography>=41.0.0
