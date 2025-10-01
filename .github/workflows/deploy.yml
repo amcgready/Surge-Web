@@ -1,0 +1,57 @@
+name: Deploy surge.video (SFTP)
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # If your site needs a build, enable this and set local-dir to your build folder below
+      # - name: Build
+      #   run: |
+      #     npm ci
+      #     npm run build
+
+      # Option A: Key-based SFTP (recommended)
+      - name: SFTP deploy via SSH key
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          protocol: sftp
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          local-dir: ./            # change to ./dist or ./out if you build
+          server-dir: ${{ secrets.SFTP_TARGET }}
+          dangerous-clean-slate: false
+          exclude: |
+            .git*
+            .github/**
+            node_modules/**
+            **/.DS_Store
+
+      # Option B: Password-based SFTP (only if you didn't set SSH_PRIVATE_KEY)
+      - name: SFTP deploy via password
+        if: ${{ secrets.SSH_PRIVATE_KEY == '' }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: sftp
+          local-dir: ./            # change to ./dist or ./out if you build
+          server-dir: ${{ secrets.SFTP_TARGET }}
+          dangerous-clean-slate: false
+          exclude: |
+            .git*
+            .github/**
+            node_modules/**
+            **/.DS_Store
