@@ -2,7 +2,7 @@ name: Deploy surge.video (SFTP)
 
 on:
   push:
-    branches: [ "main" ]   # only deploy when pushing to the public branch
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -14,17 +14,19 @@ jobs:
         with:
           fetch-depth: 1
 
-      # If your site requires a build (React/Vite/etc), uncomment below
+      # Uncomment if you build (then set local-dir to ./dist below)
       # - name: Build
       #   run: |
       #     npm ci
       #     npm run build
 
-      - name: Write SSH key
+      - name: Write SSH key (inside workspace for container access)
+        env:
+          KEY_PATH: ${{ github.workspace }}/.ssh/id_ed25519
         run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          install -m 700 -d "$(dirname "$KEY_PATH")"
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
 
       - name: Preflight SSH check (list target)
         uses: appleboy/ssh-action@v1.0.3
@@ -32,7 +34,9 @@ jobs:
           host: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
           username: ${{ secrets.SFTP_USERNAME }}
-          key_path: ~/.ssh/id_ed25519
+          key_path: ${{ github.workspace }}/.ssh/id_ed25519
+          timeout: 60s
+          command_timeout: 5m
           script: |
             echo "Target: ${{ secrets.SFTP_TARGET }}"
             mkdir -p "${{ secrets.SFTP_TARGET }}"
@@ -46,7 +50,7 @@ jobs:
           username: ${{ secrets.SFTP_USERNAME }}
           protocol: sftp
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          local-dir: ./            # change to ./dist if you build
+          local-dir: ./            # change to ./dist if you built above
           server-dir: ${{ secrets.SFTP_TARGET }}
           dangerous-clean-slate: false
           log-level: verbose
