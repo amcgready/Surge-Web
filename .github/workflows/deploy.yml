@@ -2,7 +2,7 @@ name: Deploy surge.video (SFTP)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]   # deploys only when pushing to main
 
 jobs:
   deploy:
@@ -14,19 +14,11 @@ jobs:
         with:
           fetch-depth: 1
 
-      # Uncomment if you build (then set local-dir to ./dist below)
+      # Uncomment if you build (React/Vite/etc) and change local-dir below
       # - name: Build
       #   run: |
       #     npm ci
       #     npm run build
-
-      - name: Write SSH key (inside workspace for container access)
-        env:
-          KEY_PATH: ${{ github.workspace }}/.ssh/id_ed25519
-        run: |
-          install -m 700 -d "$(dirname "$KEY_PATH")"
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$KEY_PATH"
-          chmod 600 "$KEY_PATH"
 
       - name: Preflight SSH check (list target)
         uses: appleboy/ssh-action@v1.0.3
@@ -34,7 +26,7 @@ jobs:
           host: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
           username: ${{ secrets.SFTP_USERNAME }}
-          key_path: ${{ github.workspace }}/.ssh/id_ed25519
+          key: ${{ secrets.SSH_PRIVATE_KEY }}   # use the secret directly
           timeout: 60s
           command_timeout: 5m
           script: |
