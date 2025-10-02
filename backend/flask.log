@@ -1,0 +1,26 @@
+nohup: ignoring input
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-137-641
+(2185848) wsgi starting up on http://0.0.0.0:5001
+(2185848) accepted ('127.0.0.1', 52616)
+127.0.0.1 - - [01/Oct/2025 18:01:47] "GET /api/health HTTP/1.1" 200 272 0.001401
+(2185848) accepted ('127.0.0.1', 40406)
+INFO:__main__:New user registered: newuser from 127.0.0.1
+ERROR:__main__:Failed to send verification email to newuser@example.com: (530, b'5.7.0 Authentication Required. For more information, go to\n5.7.0  https://support.google.com/accounts/troubleshooter/2402620. 41be03b00d2f7-b6099afac45sm733909a12.17 - gsmtp', 'noreply@surge.video')
+127.0.0.1 - - [01/Oct/2025 18:01:53] "POST /api/auth/register HTTP/1.1" 200 347 0.894317
+(2185848) accepted ('127.0.0.1', 40410)
+127.0.0.1 - - [01/Oct/2025 18:02:01] "POST /api/auth/login HTTP/1.1" 403 344 0.001560
+(2185848) accepted ('127.0.0.1', 34956)
+INFO:__main__:User testuser logged in successfully from 127.0.0.1
+127.0.0.1 - - [01/Oct/2025 18:02:07] "POST /api/auth/login HTTP/1.1" 200 492 0.222662
+(2185848) accepted ('127.0.0.1', 54784)
+INFO:__main__:Email verified for user: newuser
+127.0.0.1 - - [02/Oct/2025 07:35:15] "POST /api/auth/verify-email HTTP/1.1" 200 287 0.005743
+(2185848) accepted ('127.0.0.1', 42840)
+INFO:__main__:User newuser logged in successfully from 127.0.0.1
+127.0.0.1 - - [02/Oct/2025 07:36:17] "POST /api/auth/login HTTP/1.1" 200 489 0.214614
+(2185848) accepted ('127.0.0.1', 37492)
+127.0.0.1 - - [02/Oct/2025 07:44:20] "POST /api/auth/resend-verification HTTP/1.1" 200 308 0.001926
+Database initialized successfully!
+Test user already exists

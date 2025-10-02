@@ -23,6 +23,9 @@ function AuthComponent({ onLogin }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   // Password validation function
   const validatePassword = (password) => {
@@ -71,6 +74,7 @@ function AuthComponent({ onLogin }) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
     if (tab === 0) {
       // Login
@@ -80,6 +84,10 @@ function AuthComponent({ onLogin }) {
       });
 
       if (!result.success) {
+        if (result.error.includes('verify your email')) {
+          setNeedsVerification(true);
+          setShowResendVerification(true);
+        }
         setError(result.error || 'Login failed');
       }
     } else {
@@ -112,15 +120,10 @@ function AuthComponent({ onLogin }) {
         });
 
         if (resp.ok) {
-          // Auto-login after registration
-          const result = await onLogin({
-            username: formData.username,
-            password: formData.password
-          });
-
-          if (!result.success) {
-            setError(result.error || 'Login failed after registration');
-          }
+          const data = await resp.json();
+          setSuccessMessage(data.message);
+          setTab(0); // Switch to login tab
+          setFormData({ ...formData, password: '', confirmPassword: '' });
         } else {
           const errorData = await resp.json();
           setError(errorData.error || 'Registration failed');
@@ -130,6 +133,36 @@ function AuthComponent({ onLogin }) {
       }
     }
 
+    setLoading(false);
+  };
+
+  const handleResendVerification = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const resp = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email || formData.username  // Try email field first, then username
+        })
+      });
+
+      const data = await resp.json();
+      
+      if (resp.ok) {
+        setSuccessMessage(data.message);
+        setShowResendVerification(false);
+      } else {
+        setError(data.error || 'Failed to resend verification email');
+      }
+    } catch (e) {
+      setError('Network error: ' + e.message);
+    }
+    
     setLoading(false);
   };
 
@@ -298,6 +331,28 @@ function AuthComponent({ onLogin }) {
             {error && (
               <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
                 {error}
+              </Alert>
+            )}
+
+            {successMessage && (
+              <Alert severity="success" sx={{ mt: 2, mb: 2 }}>
+                {successMessage}
+              </Alert>
+            )}
+
+            {showResendVerification && (
+              <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Didn't receive the verification email?
+                </Typography>
+                <Button 
+                  size="small" 
+                  onClick={handleResendVerification}
+                  disabled={loading}
+                  sx={{ color: '#07938f' }}
+                >
+                  Resend Verification Email
+                </Button>
               </Alert>
             )}
 

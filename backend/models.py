@@ -71,6 +71,9 @@ class User(db.Model):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
+    is_email_verified = Column(Boolean, default=False)
+    email_verification_token = Column(String(128), nullable=True, unique=True)
+    email_verification_expires = Column(DateTime, nullable=True)
     login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
     
@@ -134,6 +137,35 @@ class User(db.Model):
         if self.locked_until and datetime.utcnow() < self.locked_until:
             return True
         return False
+    
+    def generate_email_verification_token(self):
+        """Generate and set email verification token"""
+        import secrets
+        from datetime import timedelta
+        
+        self.email_verification_token = secrets.token_urlsafe(64)
+        # Token expires in 24 hours
+        self.email_verification_expires = datetime.utcnow() + timedelta(hours=24)
+        return self.email_verification_token
+    
+    def verify_email_token(self, token):
+        """Verify email verification token"""
+        if (self.email_verification_token == token and 
+            self.email_verification_expires and 
+            datetime.utcnow() < self.email_verification_expires):
+            
+            self.is_email_verified = True
+            self.email_verification_token = None
+            self.email_verification_expires = None
+            self.updated_at = datetime.utcnow()
+            return True
+        return False
+    
+    def is_email_verification_expired(self):
+        """Check if email verification token is expired"""
+        if not self.email_verification_expires:
+            return True
+        return datetime.utcnow() > self.email_verification_expires
     
     def to_dict(self):
         """Return user data as dictionary (safe for JSON)"""
@@ -260,6 +292,7 @@ def init_database(app):
         # Create indexes for better performance using modern SQLAlchemy syntax
         with db.engine.connect() as connection:
             connection.execute(text('CREATE INDEX IF NOT EXISTS idx_users_username_hash ON users(username_hash);'))
+            connection.execute(text('CREATE INDEX IF NOT EXISTS idx_users_email_verification ON users(email_verification_token);'))
             connection.execute(text('CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(session_token);'))
             connection.execute(text('CREATE INDEX IF NOT EXISTS idx_sessions_daemon_token ON user_sessions(daemon_token);'))
             connection.execute(text('CREATE INDEX IF NOT EXISTS idx_deployments_user_id ON deployment_logs(user_id);'))
@@ -283,6 +316,9 @@ def create_test_user():
             email='test@surge.video',
             password='TestPassword123!'
         )
+        
+        # Skip email verification for test user
+        test_user.is_email_verified = True
         
         db.session.add(test_user)
         db.session.commit()

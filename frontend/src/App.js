@@ -4,6 +4,7 @@ import StorageConfigStep from './StorageConfigStep';
 import ExternalAPIStep from './ExternalAPIStep';
 import AdditionalServicesStep from './AdditionalServicesStep';
 import AuthComponent from './AuthComponent';
+import EmailVerification from './EmailVerification';
 import DaemonStatus from './DaemonStatus';
 import { Container, Typography, Box, Stepper, Step, StepLabel, Button, Tooltip, Divider } from '@mui/material';
 import io from 'socket.io-client';
@@ -509,8 +510,11 @@ function App() {
     }
   });
 
-  // Check authentication on mount
-  useEffect(() => {
+  // Check for email verification route
+  const isEmailVerificationRoute = window.location.pathname === '/verify-email' || window.location.search.includes('token=');
+
+  // Check if user is authenticated on component mount
+  React.useEffect(() => {
     const token = localStorage.getItem('surge-auth-token');
     const userData = localStorage.getItem('surge-user');
     
@@ -519,9 +523,7 @@ function App() {
       setUser(JSON.parse(userData));
       setIsAuthenticated(true);
     }
-  }, []);
-
-  // Setup WebSocket connection when authenticated
+  }, []);  // Setup WebSocket connection when authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       const newSocket = io(process.env.NODE_ENV === 'production' ? 'https://surge.video' : 'http://localhost:5001', {
@@ -773,6 +775,13 @@ function App() {
     } catch (e) {
       setDeployResult('Error: ' + e.message);
     }
+  }
+
+  // Show email verification screen if on verification route
+  if (isEmailVerificationRoute) {
+    return <EmailVerification onVerificationComplete={() => {
+      window.location.href = '/';
+    }} />;
   }
 
   // Show login screen if not authenticated

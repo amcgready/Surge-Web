@@ -3,9 +3,10 @@
 Surge WebUI Backend with WebSocket support for local daemon communication
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, url_for
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, disconnect, join_room, leave_room
+from flask_mail import Mail, Message
 from sqlalchemy import text
 import json
 import os
@@ -19,6 +20,7 @@ import hashlib
 import asyncio
 from threading import Thread
 import time
+import secrets
 
 # Import database models
 from models import db, init_database, User, UserSession, DeploymentLog, create_test_user
@@ -32,28 +34,119 @@ app = Flask(__name__)
 # Database Configuration
 database_url = os.environ.get('DATABASE_URL')
 if not database_url:
-    # Default PostgreSQL configuration
-    db_user = os.environ.get('DB_USER', 'surge_user')
-    db_password = os.environ.get('DB_PASSWORD', 'surge_password')
-    db_host = os.environ.get('DB_HOST', 'localhost')
-    db_port = os.environ.get('DB_PORT', '5432')
-    db_name = os.environ.get('DB_NAME', 'surge_db')
-    database_url = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+    # Use SQLite for development/testing when no PostgreSQL is available
+    if os.environ.get('FLASK_ENV') == 'development' or not os.environ.get('DB_HOST'):
+        database_url = 'sqlite:///surge_dev.db'
+    else:
+        # Default PostgreSQL configuration for production
+        db_user = os.environ.get('DB_USER', 'surge_user')
+        db_password = os.environ.get('DB_PASSWORD', 'surge_password')
+        db_host = os.environ.get('DB_HOST', 'localhost')
+        db_port = os.environ.get('DB_PORT', '5432')
+        db_name = os.environ.get('DB_NAME', 'surge_db')
+        database_url = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'surge-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Email Configuration
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', '587'))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@surge.video')
 
 CORS(app, origins=["http://localhost:3000", "http://localhost:3100"])
 
 # Initialize database
 init_database(app)
 
+# Initialize Flask-Mail
+mail = Mail(app)
+
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://localhost:3100"])
 
 # In-memory storage for connected clients (use Redis in production)
 connected_clients = {}
+
+def send_email_verification(user, token):
+    """Send email verification email to user"""
+    try:
+        # Generate verification URL
+        if os.environ.get('FLASK_ENV') == 'production':
+            base_url = 'https://surge.video'
+        else:
+            base_url = 'http://localhost:3100'
+        
+        verification_url = f"{base_url}/verify-email?token={token}"
+        
+        # Create email message
+        msg = Message(
+            subject='Confirm Your Surge.video Account',
+            recipients=[user.email],
+            html=f'''
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #2196F3;">Welcome to Surge.video!</h1>
+                </div>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h2>Hi {user.username}!</h2>
+                    <p>Thank you for registering with Surge.video. To complete your account setup and start building your media server stack, please confirm your email address.</p>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_url}" 
+                       style="background: #2196F3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                        Confirm Your Email
+                    </a>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p><strong>Security Note:</strong> This verification link will expire in 24 hours. If you didn't create a Surge.video account, you can safely ignore this email.</p>
+                </div>
+                
+                <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 30px; color: #666; font-size: 12px;">
+                    <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all;">{verification_url}</p>
+                    
+                    <p style="margin-top: 20px;">
+                        Best regards,<br>
+                        The Surge.video Team
+                    </p>
+                </div>
+            </body>
+            </html>
+            ''',
+            body=f'''
+Welcome to Surge.video!
+
+Hi {user.username},
+
+Thank you for registering with Surge.video. To complete your account setup and start building your media server stack, please confirm your email address by clicking the link below:
+
+{verification_url}
+
+This verification link will expire in 24 hours. If you didn't create a Surge.video account, you can safely ignore this email.
+
+If the link above doesn't work, copy and paste it into your browser.
+
+Best regards,
+The Surge.video Team
+            '''
+        )
+        
+        mail.send(msg)
+        logger.info(f"Verification email sent to {user.email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {user.email}: {e}")
+        return False
 
 # Authentication decorator
 def require_auth(f):
@@ -107,6 +200,14 @@ def login():
         # Check if user is active
         if not user.is_active:
             return jsonify({'error': 'Account is disabled'}), 401
+        
+        # Check if email is verified
+        if not user.is_email_verified:
+            return jsonify({
+                'error': 'Please verify your email address before logging in. Check your email for the verification link.',
+                'requires_verification': True,
+                'user_id': user.id
+            }), 403
         
         # Verify password
         if not user.check_password(password):
@@ -199,28 +300,134 @@ def register():
         if not any(c in '!@#$%^&*()_+-=[]{};\'"\\|,.<>/?' for c in password):
             return jsonify({'error': 'Password must contain at least one special character'}), 400
         
-        # Create new user
+        # Create new user (unverified)
         new_user = User(
             username=username,
             email=email,
             password=password
         )
         
+        # Generate email verification token
+        verification_token = new_user.generate_email_verification_token()
+        
         db.session.add(new_user)
         db.session.commit()
         
         logger.info(f"New user registered: {username} from {request.remote_addr}")
         
-        return jsonify({
-            'success': True,
-            'message': 'User registered successfully',
-            'user_id': new_user.id
-        })
+        # Send verification email
+        if send_email_verification(new_user, verification_token):
+            return jsonify({
+                'success': True,
+                'message': 'Registration successful! Please check your email to verify your account.',
+                'user_id': new_user.id,
+                'email_sent': True
+            })
+        else:
+            # If email sending fails, still register but notify user
+            return jsonify({
+                'success': True,
+                'message': 'Registration successful, but we could not send the verification email. Please contact support.',
+                'user_id': new_user.id,
+                'email_sent': False
+            })
         
     except Exception as e:
         logger.error(f"Registration error: {e}")
         db.session.rollback()
         return jsonify({'error': 'Registration failed. Please try again.'}), 500
+
+@app.route('/api/auth/verify-email', methods=['POST'])
+def verify_email():
+    """Verify user email with token"""
+    try:
+        data = request.get_json()
+        token = data.get('token', '').strip()
+        
+        if not token:
+            return jsonify({'error': 'Verification token is required'}), 400
+        
+        # Find user by verification token
+        user = User.query.filter_by(email_verification_token=token).first()
+        
+        if not user:
+            return jsonify({'error': 'Invalid or expired verification token'}), 400
+        
+        # Check if token is expired
+        if user.is_email_verification_expired():
+            return jsonify({'error': 'Verification token has expired. Please request a new verification email.'}), 400
+        
+        # Verify the token
+        if user.verify_email_token(token):
+            db.session.commit()
+            
+            logger.info(f"Email verified for user: {user.username}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Email verified successfully! You can now log in.',
+                'username': user.username
+            })
+        else:
+            return jsonify({'error': 'Invalid verification token'}), 400
+            
+    except Exception as e:
+        logger.error(f"Email verification error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Verification failed. Please try again.'}), 500
+
+@app.route('/api/auth/resend-verification', methods=['POST'])
+def resend_verification():
+    """Resend verification email"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # Find user by email
+        user = User.find_by_email(email)
+        
+        if not user:
+            # Don't reveal if email exists - security measure
+            return jsonify({
+                'success': True,
+                'message': 'If an account with that email exists and is unverified, a new verification email will be sent.'
+            })
+        
+        # Check if already verified
+        if user.is_email_verified:
+            return jsonify({'error': 'This email address is already verified'}), 400
+        
+        # Generate new verification token
+        verification_token = user.generate_email_verification_token()
+        db.session.commit()
+        
+        # Send verification email
+        email_sent = send_email_verification(user, verification_token)
+        
+        if os.environ.get('FLASK_ENV') == 'development':
+            # In development, always return success even if email fails
+            logger.info(f"Development mode: Generated new verification token for {user.email}")
+            return jsonify({
+                'success': True,
+                'message': 'A new verification email has been sent. Please check your inbox.',
+                'development_note': 'Email sending skipped in development mode'
+            })
+        elif email_sent:
+            logger.info(f"Resent verification email to {user.email}")
+            return jsonify({
+                'success': True,
+                'message': 'A new verification email has been sent. Please check your inbox.'
+            })
+        else:
+            return jsonify({'error': 'Failed to send verification email. Please try again later.'}), 500
+            
+    except Exception as e:
+        logger.error(f"Resend verification error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to resend verification email. Please try again.'}), 500
 
 @app.route('/api/daemon/token', methods=['POST'])
 @require_auth
@@ -555,6 +762,38 @@ def autodetect():
     """Try to autodetect existing services"""
     # TODO: Implement service autodetection
     return jsonify({})
+
+@app.route('/api/test/send-email', methods=['POST'])
+def test_email():
+    """Test email sending (development only)"""
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'error': 'Not available in production'}), 403
+    
+    try:
+        data = request.get_json()
+        email = data.get('email', 'test@example.com')
+        
+        msg = Message(
+            subject='Surge.video Test Email',
+            recipients=[email],
+            html='''
+            <h2>Test Email from Surge.video</h2>
+            <p>This is a test email to verify email configuration.</p>
+            <p>If you received this, email sending is working correctly!</p>
+            ''',
+            body='Test email from Surge.video - Email sending is working!'
+        )
+        
+        mail.send(msg)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Test email sent to {email}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Test email error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/init/test-user', methods=['POST'])
 def create_test_user_endpoint():

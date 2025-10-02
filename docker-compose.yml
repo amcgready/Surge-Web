@@ -40,6 +40,12 @@ services:
       - DB_NAME=${DB_NAME:-surge_db}
       - DB_USER=${DB_USER:-surge_user}
       - DB_PASSWORD=${DB_PASSWORD:-surge_password}
+      - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USE_TLS=${MAIL_USE_TLS:-true}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-noreply@surge.video}
     restart: unless-stopped
     volumes:
       - ./backend:/app
