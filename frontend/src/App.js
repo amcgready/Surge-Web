@@ -5,6 +5,7 @@ import ExternalAPIStep from './ExternalAPIStep';
 import AdditionalServicesStep from './AdditionalServicesStep';
 import AuthComponent from './AuthComponent';
 import EmailVerification from './EmailVerification';
+import PasswordReset from './PasswordReset';
 import DaemonStatus from './DaemonStatus';
 import { Container, Typography, Box, Stepper, Step, StepLabel, Button, Tooltip, Divider } from '@mui/material';
 import io from 'socket.io-client';
@@ -512,6 +513,10 @@ function App() {
 
   // Check for email verification route
   const isEmailVerificationRoute = window.location.pathname === '/verify-email' || window.location.search.includes('token=');
+  
+  // Check for password reset route
+  const isPasswordResetRoute = window.location.pathname === '/reset-password';
+  const passwordResetToken = new URLSearchParams(window.location.search).get('token');
 
   // Check if user is authenticated on component mount
   React.useEffect(() => {
@@ -775,6 +780,16 @@ function App() {
     } catch (e) {
       setDeployResult('Error: ' + e.message);
     }
+  }
+
+  // Show password reset screen if on reset route
+  if (isPasswordResetRoute && passwordResetToken) {
+    return <PasswordReset 
+      token={passwordResetToken}
+      onComplete={() => {
+        window.location.href = '/';
+      }} 
+    />;
   }
 
   // Show email verification screen if on verification route

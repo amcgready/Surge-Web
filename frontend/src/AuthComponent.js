@@ -6,15 +6,13 @@ import {
   Button, 
   Typography, 
   Box, 
-  Alert,
-  Tab,
-  Tabs
+  Alert
 } from '@mui/material';
 import SurgeLogo from './SurgeLogo';
 import bgImage from './assets/background.jpg';
 
 function AuthComponent({ onLogin }) {
-  const [tab, setTab] = useState(0);
+  const [showRegister, setShowRegister] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -26,6 +24,9 @@ function AuthComponent({ onLogin }) {
   const [successMessage, setSuccessMessage] = useState('');
   const [showResendVerification, setShowResendVerification] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
 
   // Password validation function
   const validatePassword = (password) => {
@@ -76,7 +77,7 @@ function AuthComponent({ onLogin }) {
     setError('');
     setSuccessMessage('');
 
-    if (tab === 0) {
+    if (!showRegister && !showForgotPassword) {
       // Login
       const result = await onLogin({
         username: formData.username,
@@ -90,7 +91,7 @@ function AuthComponent({ onLogin }) {
         }
         setError(result.error || 'Login failed');
       }
-    } else {
+    } else if (showRegister) {
       // Register - validate passwords match
       if (formData.password !== formData.confirmPassword) {
         setError('Passwords do not match');
@@ -122,11 +123,41 @@ function AuthComponent({ onLogin }) {
         if (resp.ok) {
           const data = await resp.json();
           setSuccessMessage(data.message);
-          setTab(0); // Switch to login tab
+          setShowRegister(false); // Switch to login form
           setFormData({ ...formData, password: '', confirmPassword: '' });
         } else {
           const errorData = await resp.json();
           setError(errorData.error || 'Registration failed');
+        }
+      } catch (e) {
+        setError('Network error: ' + e.message);
+      }
+    } else if (showForgotPassword) {
+      // Forgot Password
+      if (!forgotPasswordEmail) {
+        setError('Email is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: forgotPasswordEmail
+          })
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          setSuccessMessage(data.message);
+          setForgotPasswordSent(true);
+        } else {
+          const errorData = await resp.json();
+          setError(errorData.error || 'Failed to send reset email');
         }
       } catch (e) {
         setError('Network error: ' + e.message);
@@ -204,43 +235,61 @@ function AuthComponent({ onLogin }) {
             </Typography>
           </Box>
 
-          <Tabs 
-            value={tab} 
-            onChange={(e, newValue) => setTab(newValue)}
-            variant="fullWidth"
-            sx={{
-              marginBottom: 3,
-              '& .MuiTab-root': { color: '#ccc' },
-              '& .Mui-selected': { color: '#07938f !important' },
-              '& .MuiTabs-indicator': { backgroundColor: '#07938f' }
-            }}
-          >
-            <Tab label="Login" />
-            <Tab label="Register" />
-          </Tabs>
+          {(showRegister || showForgotPassword) && (
+            <Box sx={{ textAlign: 'center', mb: 2 }}>
+              <Typography variant="h6" style={{ color: '#fff' }}>
+                {showForgotPassword ? 'Reset Password' : 'Create Account'}
+              </Typography>
+            </Box>
+          )}
 
           <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="Username"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-              sx={{
-                '& .MuiInputLabel-root': { color: '#ccc' },
-                '& .MuiOutlinedInput-root': {
-                  color: '#fff',
-                  height: '56px',
-                  '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                  '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                  '&.Mui-focused fieldset': { borderColor: '#07938f' }
-                }
-              }}
-            />
+            {showForgotPassword ? (
+              // Forgot Password Form
+              <TextField
+                fullWidth
+                label="Email Address"
+                type="email"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                margin="normal"
+                required
+                disabled={forgotPasswordSent}
+                sx={{
+                  '& .MuiInputLabel-root': { color: '#ccc' },
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    height: '56px',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                    '&.Mui-focused fieldset': { borderColor: '#07938f' }
+                  }
+                }}
+              />
+            ) : (
+              // Login/Register Username Field
+              <TextField
+                fullWidth
+                label="Username"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                margin="normal"
+                required
+                sx={{
+                  '& .MuiInputLabel-root': { color: '#ccc' },
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    height: '56px',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                    '&.Mui-focused fieldset': { borderColor: '#07938f' }
+                  }
+                }}
+              />
+            )}
 
-            {tab === 1 && (
+            {showRegister && (
               <TextField
                 fullWidth
                 label="Email"
@@ -263,7 +312,8 @@ function AuthComponent({ onLogin }) {
               />
             )}
 
-            <TextField
+            {!showForgotPassword && (
+              <TextField
               fullWidth
               label="Password"
               name="password"
@@ -272,11 +322,11 @@ function AuthComponent({ onLogin }) {
               onChange={handleInputChange}
               margin="normal"
               required
-              error={tab === 1 && formData.password && !validatePassword(formData.password).isValid}
+              error={showRegister && formData.password && !validatePassword(formData.password).isValid}
               helperText={
-                tab === 1 && formData.password && !validatePassword(formData.password).isValid
+                showRegister && formData.password && !validatePassword(formData.password).isValid
                   ? validatePassword(formData.password).message
-                  : tab === 1
+                  : showRegister
                     ? '(8+ chars, 1 uppercase, 1 number, 1 special character)'
                     : ''
               }
@@ -290,15 +340,32 @@ function AuthComponent({ onLogin }) {
                   '&.Mui-focused fieldset': { borderColor: '#07938f' }
                 },
                 '& .MuiFormHelperText-root': { 
-                  color: tab === 1 && formData.password && !validatePassword(formData.password).isValid 
+                  color: showRegister && formData.password && !validatePassword(formData.password).isValid 
                     ? '#f44336' 
                     : '#888'
                 }
               }}
             />
+            )}
 
+            {!showRegister && !showForgotPassword && (
+              <Box sx={{ textAlign: 'right', mt: 1, mb: 1 }}>
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={() => setShowForgotPassword(true)}
+                  sx={{ 
+                    color: '#07938f', 
+                    textDecoration: 'none',
+                    '&:hover': { textDecoration: 'underline' }
+                  }}
+                >
+                  Forgot Password?
+                </Button>
+              </Box>
+            )}
 
-            {tab === 1 && (
+            {showRegister && (
               <TextField
                 fullWidth
                 label="Confirm Password"
@@ -308,9 +375,9 @@ function AuthComponent({ onLogin }) {
                 onChange={handleInputChange}
                 margin="normal"
                 required
-                error={tab === 1 && formData.confirmPassword && formData.password !== formData.confirmPassword}
+                error={showRegister && formData.confirmPassword && formData.password !== formData.confirmPassword}
                 helperText={
-                  tab === 1 && formData.confirmPassword && formData.password !== formData.confirmPassword
+                  showRegister && formData.confirmPassword && formData.password !== formData.confirmPassword
                     ? 'Passwords do not match'
                     : ''
                 }
@@ -360,7 +427,7 @@ function AuthComponent({ onLogin }) {
               type="submit"
               fullWidth
               variant="contained"
-              disabled={loading}
+              disabled={loading || (showForgotPassword && forgotPasswordSent)}
               sx={{
                 mt: 3,
                 mb: 2,
@@ -369,17 +436,25 @@ function AuthComponent({ onLogin }) {
                 '&:disabled': { backgroundColor: 'rgba(255,255,255,0.1)' }
               }}
             >
-              {loading ? 'Please wait...' : (tab === 0 ? 'Login' : 'Register')}
+              {loading ? 'Please wait...' : showForgotPassword ? (forgotPasswordSent ? 'Email Sent!' : 'Send Reset Email') : (showRegister ? 'Register' : 'Login')}
             </Button>
 
             <Box mt={2} textAlign="center">
               <Typography variant="body2" style={{ color: '#ccc' }}>
-                {tab === 0 ? "Don't have an account? " : "Already have an account? "}
+                {showForgotPassword ? "Remember your password? " : 
+                 !showRegister ? "Don't have an account? " : "Already have an account? "}
                 <Button 
-                  onClick={() => setTab(tab === 0 ? 1 : 0)}
+                  onClick={() => {
+                    if (showForgotPassword) {
+                      setShowForgotPassword(false);
+                    } else {
+                      setShowRegister(!showRegister);
+                    }
+                  }}
                   sx={{ color: '#07938f', textTransform: 'none' }}
                 >
-                  {tab === 0 ? 'Register here' : 'Login here'}
+                  {showForgotPassword ? 'Login here' : 
+                   !showRegister ? 'Register here' : 'Login here'}
                 </Button>
               </Typography>
             </Box>

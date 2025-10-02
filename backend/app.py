@@ -21,6 +21,10 @@ import asyncio
 from threading import Thread
 import time
 import secrets
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import database models
 from models import db, init_database, User, UserSession, DeploymentLog, create_test_user
@@ -54,9 +58,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', '587'))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', 'on', '1']
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@surge.video')
+app.config['MAIL_DEBUG'] = os.environ.get('MAIL_DEBUG', 'false').lower() in ['true', 'on', '1']
+
+# Log email configuration (without sensitive data)
+if app.config['MAIL_USERNAME']:
+    ssl_tls = "SSL" if app.config['MAIL_USE_SSL'] else ("TLS" if app.config['MAIL_USE_TLS'] else "Plain")
+    logger.info(f"📧 Email configured: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']} ({ssl_tls})")
+else:
+    logger.warning("⚠️  Email not configured - MAIL_USERNAME not set. Email features will be disabled.")
 
 CORS(app, origins=["http://localhost:3000", "http://localhost:3100"])
 
@@ -73,79 +86,95 @@ socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://
 connected_clients = {}
 
 def send_email_verification(user, token):
-    """Send email verification email to user"""
+    """Send email verification email to user with customizable templates"""
+    # Check if email is configured
+    if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        logger.error("📧 Email not configured - missing MAIL_USERNAME or MAIL_PASSWORD")
+        return False
+    
     try:
+        from email_templates import email_config, renderer
+        
         # Generate verification URL
         if os.environ.get('FLASK_ENV') == 'production':
             base_url = 'https://surge.video'
         else:
-            base_url = 'http://localhost:3100'
+            base_url = 'http://localhost:3002'  # Updated to match frontend port
         
         verification_url = f"{base_url}/verify-email?token={token}"
         
-        # Create email message
-        msg = Message(
-            subject='Confirm Your Surge.video Account',
-            recipients=[user.email],
-            html=f'''
-            <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #2196F3;">Welcome to Surge.video!</h1>
-                </div>
-                
-                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <h2>Hi {user.username}!</h2>
-                    <p>Thank you for registering with Surge.video. To complete your account setup and start building your media server stack, please confirm your email address.</p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_url}" 
-                       style="background: #2196F3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                        Confirm Your Email
-                    </a>
-                </div>
-                
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                    <p><strong>Security Note:</strong> This verification link will expire in 24 hours. If you didn't create a Surge.video account, you can safely ignore this email.</p>
-                </div>
-                
-                <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 30px; color: #666; font-size: 12px;">
-                    <p>If the button above doesn't work, copy and paste this link into your browser:</p>
-                    <p style="word-break: break-all;">{verification_url}</p>
-                    
-                    <p style="margin-top: 20px;">
-                        Best regards,<br>
-                        The Surge.video Team
-                    </p>
-                </div>
-            </body>
-            </html>
-            ''',
-            body=f'''
-Welcome to Surge.video!
-
-Hi {user.username},
-
-Thank you for registering with Surge.video. To complete your account setup and start building your media server stack, please confirm your email address by clicking the link below:
-
-{verification_url}
-
-This verification link will expire in 24 hours. If you didn't create a Surge.video account, you can safely ignore this email.
-
-If the link above doesn't work, copy and paste it into your browser.
-
-Best regards,
-The Surge.video Team
-            '''
+        # Get email configuration
+        config = email_config.get_verification_email_config(user.username, verification_url)
+        
+        # Render email templates
+        html_content, text_content = renderer.render_verification_email(
+            config['theme'], 
+            config['content']
         )
         
+        # Create email message
+        msg = Message(
+            subject=config['content']['subject'],
+            recipients=[user.email],
+            html=html_content,
+            body=text_content
+        )
+        
+        logger.info(f"📧 Sending verification email to {user.email} using theme '{email_config.theme_name}'")
         mail.send(msg)
-        logger.info(f"Verification email sent to {user.email}")
+        logger.info(f"✅ Verification email sent successfully to {user.email}")
         return True
         
     except Exception as e:
-        logger.error(f"Failed to send verification email to {user.email}: {e}")
+        import traceback
+        logger.error(f"❌ Failed to send verification email to {user.email}: {e}")
+        logger.error(f"📋 Full traceback: {traceback.format_exc()}")
+        return False
+
+def send_password_reset_email(user, token):
+    """Send password reset email to user"""
+    # Check if email is configured
+    if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        logger.error("📧 Email not configured - missing MAIL_USERNAME or MAIL_PASSWORD")
+        return False
+    
+    try:
+        from email_templates import email_config, renderer
+        
+        # Generate reset URL
+        if os.environ.get('FLASK_ENV') == 'production':
+            base_url = 'https://surge.video'
+        else:
+            base_url = 'http://localhost:3002'  # Updated to match frontend port
+        
+        reset_url = f"{base_url}/reset-password?token={token}"
+        
+        # Get email configuration
+        config = email_config.get_password_reset_config(user.username, reset_url)
+        
+        # Render email templates
+        html_content, text_content = renderer.render_password_reset_email(
+            config['theme'], 
+            config['content']
+        )
+        
+        # Create email message
+        msg = Message(
+            subject=config['content']['subject'],
+            recipients=[user.email],
+            html=html_content,
+            body=text_content
+        )
+        
+        logger.info(f"📧 Sending password reset email to {user.email} using theme '{email_config.theme_name}'")
+        mail.send(msg)
+        logger.info(f"✅ Password reset email sent successfully to {user.email}")
+        return True
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to send password reset email to {user.email}: {e}")
+        logger.error(f"📋 Full traceback: {traceback.format_exc()}")
         return False
 
 # Authentication decorator
@@ -428,6 +457,105 @@ def resend_verification():
         logger.error(f"Resend verification error: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to resend verification email. Please try again.'}), 500
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    """Send password reset email"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # Find user by email
+        user = User.find_by_email(email)
+        
+        if not user:
+            # Don't reveal if email exists - security measure
+            return jsonify({
+                'success': True,
+                'message': 'If an account with that email exists, a password reset email will be sent.'
+            })
+        
+        # Check if account is verified
+        if not user.is_email_verified:
+            return jsonify({'error': 'Please verify your email address before resetting your password'}), 400
+        
+        # Generate password reset token
+        reset_token = user.generate_password_reset_token()
+        db.session.commit()
+        
+        # Send password reset email
+        email_sent = send_password_reset_email(user, reset_token)
+        
+        if email_sent:
+            logger.info(f"Password reset email sent to {user.email}")
+            return jsonify({
+                'success': True,
+                'message': 'If an account with that email exists, a password reset email will be sent.'
+            })
+        else:
+            # Still return success for security (don't reveal if email failed)
+            logger.error(f"Failed to send password reset email to {user.email}")
+            return jsonify({
+                'success': True,
+                'message': 'If an account with that email exists, a password reset email will be sent.'
+            })
+            
+    except Exception as e:
+        logger.error(f"Password reset request error: {e}")
+        db.session.rollback()
+        return jsonify({
+            'success': True,
+            'message': 'If an account with that email exists, a password reset email will be sent.'
+        }), 200
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password with token"""
+    try:
+        data = request.get_json()
+        token = data.get('token', '').strip()
+        new_password = data.get('password', '').strip()
+        
+        if not token:
+            return jsonify({'error': 'Reset token is required'}), 400
+        
+        if not new_password:
+            return jsonify({'error': 'New password is required'}), 400
+        
+        # Validate password strength
+        if len(new_password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters long'}), 400
+        
+        # Find user by reset token
+        user = User.query.filter_by(password_reset_token=token).first()
+        
+        if not user:
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
+        
+        # Check if token is expired
+        if user.is_password_reset_expired():
+            return jsonify({'error': 'Password reset token has expired. Please request a new one.'}), 400
+        
+        # Reset the password
+        if user.reset_password_with_token(token, new_password):
+            db.session.commit()
+            
+            logger.info(f"Password reset successful for user: {user.username}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Password reset successfully! You can now log in with your new password.'
+            })
+        else:
+            return jsonify({'error': 'Invalid reset token'}), 400
+            
+    except Exception as e:
+        logger.error(f"Password reset error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Password reset failed. Please try again.'}), 500
 
 @app.route('/api/daemon/token', methods=['POST'])
 @require_auth
@@ -763,9 +891,73 @@ def autodetect():
     # TODO: Implement service autodetection
     return jsonify({})
 
+@app.route('/api/email/themes', methods=['GET'])
+def get_email_themes():
+    """Get available email themes"""
+    from email_templates import get_available_themes, email_config
+    return jsonify({
+        'success': True,
+        'themes': get_available_themes(),
+        'current_theme': email_config.theme_name
+    })
+
+@app.route('/api/email/theme', methods=['POST'])
+@require_auth
+def set_email_theme():
+    """Set email theme (admin only)"""
+    from email_templates import set_email_theme
+    
+    try:
+        data = request.get_json()
+        theme_name = data.get('theme_name')
+        
+        if not theme_name:
+            return jsonify({'error': 'Theme name is required'}), 400
+        
+        if set_email_theme(theme_name):
+            return jsonify({
+                'success': True,
+                'message': f'Email theme changed to {theme_name}',
+                'theme_name': theme_name
+            })
+        else:
+            return jsonify({'error': 'Invalid theme name'}), 400
+            
+    except Exception as e:
+        logger.error(f"Set email theme error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/email/preview/<theme_name>', methods=['GET'])
+def preview_email_theme(theme_name):
+    """Preview email with specific theme"""
+    from email_templates import EmailConfig, renderer
+    
+    try:
+        # Create temporary config with specified theme
+        temp_config = EmailConfig(theme_name)
+        
+        # Generate preview content
+        config = temp_config.get_verification_email_config(
+            'Preview User', 
+            'https://surge.video/verify-email?token=preview-token-123'
+        )
+        
+        # Render HTML
+        html_content, _ = renderer.render_verification_email(
+            config['theme'], 
+            config['content']
+        )
+        
+        # Return HTML directly for preview
+        return html_content, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        logger.error(f"Email preview error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/test/send-email', methods=['POST'])
 def test_email():
-    """Test email sending (development only)"""
+    """Test email sending with current theme (development only)"""
     if os.environ.get('FLASK_ENV') != 'development':
         return jsonify({'error': 'Not available in production'}), 403
     
@@ -773,27 +965,122 @@ def test_email():
         data = request.get_json()
         email = data.get('email', 'test@example.com')
         
+        from email_templates import email_config as current_email_config
+        theme = data.get('theme', current_email_config.theme_name)
+        
+        from email_templates import EmailConfig, renderer
+        
+        # Create config with specified theme
+        temp_config = EmailConfig(theme)
+        
+        # Generate test email
+        config = temp_config.get_verification_email_config(
+            'Test User',
+            'https://surge.video/verify-email?token=test-token-123'
+        )
+        
+        # Render email
+        html_content, text_content = renderer.render_verification_email(
+            config['theme'], 
+            config['content']
+        )
+        
+        # Send email
         msg = Message(
-            subject='Surge.video Test Email',
+            subject=f"[TEST] {config['content']['subject']}",
             recipients=[email],
-            html='''
-            <h2>Test Email from Surge.video</h2>
-            <p>This is a test email to verify email configuration.</p>
-            <p>If you received this, email sending is working correctly!</p>
-            ''',
-            body='Test email from Surge.video - Email sending is working!'
+            html=html_content,
+            body=text_content
         )
         
         mail.send(msg)
         
         return jsonify({
             'success': True,
-            'message': f'Test email sent to {email}'
+            'message': f'Test email sent to {email}',
+            'theme': theme
         })
         
     except Exception as e:
         logger.error(f"Test email error: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/email/test-smtp', methods=['POST'])
+def test_smtp_configuration():
+    """Test SMTP configuration with a simple email"""
+    data = request.get_json()
+    test_email = data.get('email') if data else None
+    
+    if not test_email:
+        return jsonify({'error': 'Email address required'}), 400
+    
+    # Check if email is configured
+    if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        return jsonify({
+            'error': 'SMTP not configured',
+            'message': 'Please set MAIL_USERNAME and MAIL_PASSWORD environment variables'
+        }), 500
+    
+    try:
+        # Send simple test email
+        msg = Message(
+            subject="Surge.video SMTP Test",
+            recipients=[test_email],
+            body="🎉 Congratulations! Your SMTP configuration is working correctly.\n\nThis test email was sent from your Surge.video application.",
+            html="""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #4A90E2;">🎉 SMTP Test Successful!</h2>
+                        <p>Congratulations! Your SMTP configuration is working correctly.</p>
+                        <p>This test email was sent from your <strong>Surge.video</strong> application.</p>
+                        <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+                        <p style="font-size: 12px; color: #666;">
+                            Server: {server}<br>
+                            Port: {port}<br>
+                            TLS: {tls}
+                        </p>
+                    </div>
+                </body>
+            </html>
+            """.format(
+                server=app.config['MAIL_SERVER'],
+                port=app.config['MAIL_PORT'],
+                tls=app.config['MAIL_USE_TLS']
+            )
+        )
+        
+        logger.info(f"📧 Sending SMTP test email to {test_email}")
+        mail.send(msg)
+        logger.info(f"✅ SMTP test email sent successfully to {test_email}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Test email sent successfully to {test_email}',
+            'smtp_config': {
+                'server': app.config['MAIL_SERVER'],
+                'port': app.config['MAIL_PORT'],
+                'tls': app.config['MAIL_USE_TLS'],
+                'sender': app.config['MAIL_DEFAULT_SENDER']
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ SMTP test failed: {e}")
+        logger.error(f"📋 Full traceback: {traceback.format_exc()}")
+        
+        return jsonify({
+            'error': 'SMTP test failed',
+            'message': str(e),
+            'smtp_config': {
+                'server': app.config['MAIL_SERVER'],
+                'port': app.config['MAIL_PORT'],
+                'tls': app.config['MAIL_USE_TLS'],
+                'username_set': bool(app.config['MAIL_USERNAME']),
+                'password_set': bool(app.config['MAIL_PASSWORD'])
+            }
+        }), 500
 
 @app.route('/api/init/test-user', methods=['POST'])
 def create_test_user_endpoint():

@@ -74,6 +74,8 @@ class User(db.Model):
     is_email_verified = Column(Boolean, default=False)
     email_verification_token = Column(String(128), nullable=True, unique=True)
     email_verification_expires = Column(DateTime, nullable=True)
+    password_reset_token = Column(String(128), nullable=True, unique=True)
+    password_reset_expires = Column(DateTime, nullable=True)
     login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
     
@@ -166,6 +168,40 @@ class User(db.Model):
         if not self.email_verification_expires:
             return True
         return datetime.utcnow() > self.email_verification_expires
+    
+    def generate_password_reset_token(self):
+        """Generate and set password reset token"""
+        import secrets
+        from datetime import timedelta
+        
+        self.password_reset_token = secrets.token_urlsafe(64)
+        # Token expires in 1 hour (more secure than email verification)
+        self.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+        return self.password_reset_token
+    
+    def verify_password_reset_token(self, token):
+        """Verify password reset token"""
+        if (self.password_reset_token == token and 
+            self.password_reset_expires and 
+            datetime.utcnow() < self.password_reset_expires):
+            return True
+        return False
+    
+    def reset_password_with_token(self, token, new_password):
+        """Reset password using token"""
+        if self.verify_password_reset_token(token):
+            self.update_password(new_password)
+            self.password_reset_token = None
+            self.password_reset_expires = None
+            self.updated_at = datetime.utcnow()
+            return True
+        return False
+    
+    def is_password_reset_expired(self):
+        """Check if password reset token is expired"""
+        if not self.password_reset_expires:
+            return True
+        return datetime.utcnow() > self.password_reset_expires
     
     def to_dict(self):
         """Return user data as dictionary (safe for JSON)"""
