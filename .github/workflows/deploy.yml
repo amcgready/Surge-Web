@@ -31,7 +31,6 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts
 
-
       - name: Raw SSH preflight (auth + network)
         env:
           SSH_HOST: ${{ secrets.SFTP_HOST }}
@@ -50,19 +49,17 @@ jobs:
           ssh -o BatchMode=yes -p "${SSH_PORT}" -i ~/.ssh/id_ed25519 "${SSH_USER}@${SSH_HOST}" "mkdir -p '${TARGET}' && ls -la '${TARGET}'"
 
       - name: SFTP deploy via SSH key
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: wlixcc/SFTP-Deploy-Action@v1.2
         with:
+          username: ${{ secrets.SFTP_USERNAME }}
           server: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          protocol: sftp
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          local-dir: ./            # change to ./dist if you built above
-          server-dir: ${{ secrets.SFTP_TARGET }}
-          dangerous-clean-slate: false
-          log-level: verbose
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          local_path: ./*
+          remote_path: ${{ secrets.SFTP_TARGET }}
+          sftp_only: true
           exclude: |
-            .git*
-            .github/**
-            node_modules/**
+            **/.git*
+            **/.github/**
+            **/node_modules/**
             **/.DS_Store
