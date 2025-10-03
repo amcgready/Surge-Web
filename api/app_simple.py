@@ -86,39 +86,9 @@ def register():
         # Store verification token
         users_db[email]['verification_token'] = verification_token
         
-        # Send verification email (simplified)
-        try:
-            msg = Message(
-                subject='Confirm Your Surge.video Account 🚀',
-                sender=app.config['MAIL_DEFAULT_SENDER'],
-                recipients=[email]
-            )
-            msg.html = f'''
-            <html>
-            <body style="font-family: Arial, sans-serif; background: #0a0e27; color: #e0e6ed; padding: 40px;">
-                <div style="max-width: 600px; margin: 0 auto; background: #1a1f3a; border-radius: 12px; padding: 40px;">
-                    <h1 style="color: #14b8a6; text-align: center;">Welcome to Surge! 🚀</h1>
-                    <h2>Hi {username}! 👋</h2>
-                    <p>Thank you for joining Surge.video! Please verify your email address to get started.</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{verification_url}" 
-                           style="background: linear-gradient(135deg, #07938f 0%, #14b8a6 100%); 
-                                  color: white; padding: 15px 30px; text-decoration: none; 
-                                  border-radius: 25px; font-weight: bold;">
-                            Verify Email Address
-                        </a>
-                    </div>
-                    <p style="color: #a7f3d0; font-size: 14px;">
-                        If you didn't create this account, you can safely ignore this email.
-                    </p>
-                </div>
-            </body>
-            </html>
-            '''
-            mail.send(msg)
-        except Exception as e:
-            logger.error(f"Failed to send verification email: {e}")
-            # Continue anyway - registration still works
+        # Auto-verify users since email isn't configured yet
+        users_db[email]['is_verified'] = True
+        logger.info(f"User {username} registered and auto-verified (email disabled)")
         
         return jsonify({
             'success': True,
