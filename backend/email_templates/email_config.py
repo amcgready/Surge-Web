@@ -162,24 +162,11 @@ class EmailConfig:
         return 'http://localhost:3100'
     
     def _get_logo_url(self) -> str:
-        """Get logo URL - dynamically from asset manifest"""
-        import requests
-        import json
-        
-        try:
-            # Try to get asset URL from our own API
-            base_url = self._get_base_url()
-            response = requests.get(f'http://localhost:5001/api/assets/manifest', timeout=2)
-            if response.status_code == 200:
-                assets = response.json()
-                return assets.get('logo', f'{base_url}/assets/Surge.png')
-        except:
-            pass
-        
-        # Fallback to environment-based logic
+        """Get logo URL - fixed for shared hosting"""
         base_url = self._get_base_url()
+        
         if os.environ.get('FLASK_ENV') == 'production':
-            # In production, use the hashed asset path from build
+            # In production on shared hosting, use static media path
             return f'{base_url}/static/media/Surge.c18ed7a95cced26cabbb.png'
         else:
             # In development, use the public folder path
