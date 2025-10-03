@@ -5,7 +5,7 @@ services:
     build: ./backend
     container_name: surge-webui-backend
     ports:
-      - "5002:5001"
+      - "5001:5001"
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
