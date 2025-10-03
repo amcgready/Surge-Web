@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 users_db = {}
 sessions_db = {}
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
@@ -52,7 +52,7 @@ def health_check():
         'timestamp': datetime.utcnow().isoformat()
     })
 
-@app.route('/api/auth/register', methods=['POST'])
+@app.route('/auth/register', methods=['POST'])
 def register():
     """User registration"""
     try:
@@ -100,7 +100,7 @@ def register():
         logger.error(f"Registration error: {e}")
         return jsonify({'error': 'Registration failed'}), 500
 
-@app.route('/api/auth/login', methods=['POST'])
+@app.route('/auth/login', methods=['POST'])
 def login():
     """User login"""
     try:
@@ -143,7 +143,7 @@ def login():
         logger.error(f"Login error: {e}")
         return jsonify({'error': 'Login failed'}), 500
 
-@app.route('/api/verify-email', methods=['POST'])
+@app.route('/verify-email', methods=['POST'])
 def verify_email():
     """Email verification"""
     try:
