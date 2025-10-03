@@ -222,3 +222,13 @@ INFO:__main__:📧 Email configured: surge.video:465 (SSL)
 WARNING:werkzeug: * Debugger is active!
 INFO:werkzeug: * Debugger PIN: 111-137-641
 (4159463) wsgi starting up on http://0.0.0.0:5001
+INFO:werkzeug: * Detected change in '/home/adam/Desktop/Surge Web/backend/email_templates/email_config.py', reloading
+Generated new encryption key: bP3E7jO8CFJ553ZZPM02cNB35QNns6leUY0NOwmE1kM=
+IMPORTANT: Save this key to ENCRYPTION_KEY environment variable!
+Database initialized successfully!
+Test user already exists
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:📧 Email configured: surge.video:465 (SSL)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-137-641
+(679285) wsgi starting up on http://0.0.0.0:5001

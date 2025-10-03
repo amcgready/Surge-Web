@@ -1,0 +1,33 @@
+{
+  "files": {
+    "main.css": "/static/css/main.2926bf53.css",
+    "main.js": "/static/js/main.00250b96.js",
+    "static/media/background.jpg": "/static/media/background.790b9cc6eb4d45e257ef.jpg",
+    "static/media/cinesync.png": "/static/media/cinesync.450503adb656f601615c.png",
+    "static/media/Surge.png": "/static/media/Surge.c18ed7a95cced26cabbb.png",
+    "static/media/Placeholdarr.png": "/static/media/Placeholdarr.074e34722ea2571cca72.png",
+    "static/media/decypharr.png": "/static/media/decypharr.94fedeefdc8280020696.png",
+    "static/media/posterizarr.png": "/static/media/posterizarr.70afeeec425d209088e4.png",
+    "static/media/bazarr.png": "/static/media/bazarr.911695f75a1196d2f30d.png",
+    "static/media/prowlarr.png": "/static/media/prowlarr.52be8dfda25c68b4c84d.png",
+    "static/media/jellyfin.png": "/static/media/jellyfin.310637af06e02b96f32e.png",
+    "static/media/plex.png": "/static/media/plex.ae562eb4d806fed498c8.png",
+    "static/media/gaps.jpg": "/static/media/gaps.be7d9c7b33917322f50e.jpg",
+    "static/media/homepage.png": "/static/media/homepage.a5501bf03488066e0aa9.png",
+    "static/media/radarr.png": "/static/media/radarr.9fe34381b1a18dcae179.png",
+    "static/media/RDT-Client.png": "/static/media/RDT-Client.12166b9c5ae36b7314ba.png",
+    "static/media/NZBGet.png": "/static/media/NZBGet.0b90316019d3e2465aaf.png",
+    "static/media/overseerr.png": "/static/media/overseerr.231994d208fe9b64a89d.png",
+    "static/media/sonarr.png": "/static/media/sonarr.fee1e467ea85545550b6.png",
+    "static/media/tautulli.png": "/static/media/tautulli.8bd0d9eb6dd8ff50b8eb.png",
+    "static/media/kometa.png": "/static/media/kometa.52cd9a10cb738cebb21b.png",
+    "static/media/pangolin.png": "/static/media/pangolin.3f171173544cf139e135.png",
+    "index.html": "/index.html",
+    "main.2926bf53.css.map": "/static/css/main.2926bf53.css.map",
+    "main.00250b96.js.map": "/static/js/main.00250b96.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.2926bf53.css",
+    "static/js/main.00250b96.js"
+  ]
+}
