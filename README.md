@@ -76,7 +76,26 @@ curl -sSL https://surge.video/install-daemon.sh | bash
 
 ## 🛠️ Development Setup
 
-### Backend Setup
+### Quick Setup (Recommended)
+```bash
+# Run the development setup script to configure assets
+./setup-development.sh
+
+# Start backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python app.py
+
+# Start frontend (new terminal)
+cd frontend
+npm install
+npm start
+```
+
+### Manual Setup
+#### Backend Setup
 ```bash
 cd backend
 python3 -m venv venv
@@ -85,7 +104,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-### Frontend Setup
+#### Frontend Setup
 ```bash
 cd frontend
 npm install
@@ -99,6 +118,34 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3 surge-daemon.py --server ws://localhost:5001/socket.io/
+```
+
+## 🏗️ Production Deployment
+
+### Automated Build & Deploy
+```bash
+# Build for production with proper asset paths
+./build-production.sh
+
+# Deploy to production
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Manual Production Build
+```bash
+# Build frontend with optimized assets
+cd frontend
+npm run build
+cd ..
+
+# Deploy with production docker-compose
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Shared Hosting Deployment
+```bash
+# For shared hosting without Docker
+./deploy-shared-hosting.sh
 ```
 
 ## 🔧 Configuration

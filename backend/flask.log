@@ -163,3 +163,62 @@ INFO:__main__:Password reset email sent to hypeserver@gmail.com
 (3608743) accepted ('127.0.0.1', 57662)
 INFO:__main__:Password reset successful for user: None
 127.0.0.1 - - [02/Oct/2025 14:32:36] "POST /api/auth/reset-password HTTP/1.1" 200 285 0.217141
+INFO:werkzeug: * Detected change in '/home/adam/Desktop/Surge Web/backend/email_templates/email_config.py', reloading
+Generated new encryption key: jPsgPU3CyZSLon8TNYSSi8bSoxQSFdHEJOV2XB_hXLY=
+IMPORTANT: Save this key to ENCRYPTION_KEY environment variable!
+Database initialized successfully!
+Test user already exists
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+Decryption error: 
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:📧 Email configured: surge.video:465 (SSL)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-137-641
+(4143338) wsgi starting up on http://0.0.0.0:5001
+INFO:werkzeug: * Detected change in '/home/adam/Desktop/Surge Web/backend/app.py', reloading
+Generated new encryption key: y9F1jQiWqQi2u1DiLtj7Tl9JuD5uq26pn0lTrzNTjac=
+IMPORTANT: Save this key to ENCRYPTION_KEY environment variable!
+Database initialized successfully!
+Test user already exists
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:📧 Email configured: surge.video:465 (SSL)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-137-641
+(4146678) wsgi starting up on http://0.0.0.0:5001
+INFO:werkzeug: * Detected change in '/home/adam/Desktop/Surge Web/backend/email_templates/email_config.py', reloading
+Generated new encryption key: SnfjVhCPFWctxTjQlTPDxOGYi-nxCXfoEMG6-b3dzB0=
+IMPORTANT: Save this key to ENCRYPTION_KEY environment variable!
+Database initialized successfully!
+Test user already exists
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:📧 Email configured: surge.video:465 (SSL)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-137-641
+(4146942) wsgi starting up on http://0.0.0.0:5001
+(4146942) accepted ('127.0.0.1', 58978)
+127.0.0.1 - - [02/Oct/2025 19:56:09] "GET /api/assets/manifest HTTP/1.1" 200 293 0.001556
+(4146942) accepted ('127.0.0.1', 58994)
+127.0.0.1 - - [02/Oct/2025 19:56:09] "GET /api/assets/manifest HTTP/1.1" 200 293 0.000689
+INFO:werkzeug: * Detected change in '/home/adam/Desktop/Surge Web/backend/app.py', reloading
+Generated new encryption key: Mtyr_umYpq-dAD0GxDKcYqFHMwBEclR5dRKmwRsZWXQ=
+IMPORTANT: Save this key to ENCRYPTION_KEY environment variable!
+Database initialized successfully!
+Test user already exists
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:📧 Email configured: surge.video:465 (SSL)
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-137-641
+(4159463) wsgi starting up on http://0.0.0.0:5001

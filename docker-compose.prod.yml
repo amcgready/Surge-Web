@@ -25,6 +25,7 @@ services:
   webui-frontend:
     build: 
       context: ./frontend
+      dockerfile: Dockerfile.prod
       args:
         - REACT_APP_API_URL=https://surge.video
     container_name: surge-webui-frontend

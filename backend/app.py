@@ -1101,6 +1101,43 @@ def create_test_user_endpoint():
         logger.error(f"Test user creation error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/assets/manifest', methods=['GET'])
+def get_asset_manifest():
+    """Get asset URLs for both development and production"""
+    import json
+    import os
+    
+    try:
+        base_url = 'https://surge.video' if os.environ.get('FLASK_ENV') == 'production' else 'http://localhost:3100'
+        
+        if os.environ.get('FLASK_ENV') == 'production':
+            # Try to read the asset manifest
+            manifest_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build', 'asset-manifest.json')
+            try:
+                with open(manifest_path, 'r') as f:
+                    manifest = json.load(f)
+                    assets = {
+                        'logo': f"{base_url}{manifest['files'].get('static/media/Surge.png', '/static/media/Surge.c18ed7a95cced26cabbb.png')}",
+                        'background': f"{base_url}{manifest['files'].get('static/media/background.jpg', '/static/media/background.790b9cc6eb4d45e257ef.jpg')}"
+                    }
+            except:
+                # Fallback to hardcoded paths
+                assets = {
+                    'logo': f'{base_url}/static/media/Surge.c18ed7a95cced26cabbb.png',
+                    'background': f'{base_url}/static/media/background.790b9cc6eb4d45e257ef.jpg'
+                }
+        else:
+            # Development paths
+            assets = {
+                'logo': f'{base_url}/assets/Surge.png',
+                'background': f'{base_url}/assets/background.jpg'
+            }
+        
+        return jsonify(assets)
+    except Exception as e:
+        logger.error(f"Asset manifest error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
