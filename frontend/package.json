@@ -19,7 +19,6 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "proxy": "http://webui-backend:5001",
   "browserslist": {
     "production": [
       ">0.2%",

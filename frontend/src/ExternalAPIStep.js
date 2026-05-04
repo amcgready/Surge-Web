@@ -88,21 +88,6 @@ const ExternalAPIStep = ({ config, setConfig }) => {
                 Enhanced TV show metadata. Register at <a href="https://thetvdb.com/api-information" target="_blank" rel="noopener noreferrer" style={{ color: '#888' }}>TVDB</a>.
               </Typography>
             </Box>
-            <Box>
-              <Typography style={{ color: '#fff', marginBottom: 4 }}>
-                Trakt API Key
-              </Typography>
-              <input
-                name="traktApiKey"
-                value={config.traktApiKey || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, traktApiKey: e.target.value }))}
-                placeholder="Enter your Trakt API key (optional)"
-                style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: 4, padding: 8 }}
-              />
-              <Typography style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
-                For watchlist sync and recommendations. Get from <a href="https://trakt.tv/oauth/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#888' }}>Trakt</a>.
-              </Typography>
-            </Box>
           </Box>
         </Box>
         {/* Alternative Debrid Services */}
@@ -139,21 +124,6 @@ const ExternalAPIStep = ({ config, setConfig }) => {
               />
               <Typography style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
                 Alternative debrid service. Get from <a href="https://www.premiumize.me/account" target="_blank" rel="noopener noreferrer" style={{ color: '#888' }}>Premiumize</a>.
-              </Typography>
-            </Box>
-            <Box>
-              <Typography style={{ color: '#fff', marginBottom: 4 }}>
-                TorBox API Token
-              </Typography>
-              <input
-                name="torboxApiToken"
-                value={config.torboxApiToken || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, torboxApiToken: e.target.value }))}
-                placeholder="Enter your TorBox API token (optional)"
-                style={{ width: '100%', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: 4, padding: 8 }}
-              />
-              <Typography style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
-                Alternative debrid service. Get from <a href="https://torbox.app/account" target="_blank" rel="noopener noreferrer" style={{ color: '#888' }}>TorBox</a>.
               </Typography>
             </Box>
     {/* Discord Webhook */}

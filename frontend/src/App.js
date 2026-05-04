@@ -22,11 +22,10 @@ import embyLogo from './assets/service-logos/emby.png';
 import jellyfinLogo from './assets/service-logos/jellyfin.png';
 import nzbgetLogo from './assets/service-logos/NZBGet.png';
 import rdtClientLogo from './assets/service-logos/RDT-Client.png';
-import gapsLogo from './assets/service-logos/gaps.jpg';
+import gapsLogo from './assets/service-logos/gaps.png';
 import decypharrLogo from './assets/service-logos/decypharr.png';
 
 const steps = [
-  'Welcome',
   'Media Server',
   'Storage Config',
   'External APIs',
@@ -36,9 +35,16 @@ const steps = [
 
 function App() {
   // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  // DEV BYPASS: starts authenticated so design/menus can be evaluated
+  // without a backend. Revert this (and the user stub below) once the
+  // new backend ships.
+  const [isAuthenticated, setIsAuthenticated] = React.useState(true);
   const [authToken, setAuthToken] = React.useState(null);
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = React.useState({
+    user_id: 'dev-bypass',
+    username: 'preview',
+    email: 'preview@local',
+  });
   
   // Daemon connection state
   const [daemonConnected, setDaemonConnected] = React.useState(false);
@@ -155,6 +161,7 @@ function App() {
     mediaServer: '', // plex|emby|jellyfin
     // Storage Config
     storagePath: '',
+    platform: '',
     // Media Automation - Radarr settings
     radarrSettings: {
       port: 7878,
@@ -462,7 +469,6 @@ function App() {
     // Shared Configuration
     destinationDir: '',
     discordWebhook: '',
-    traktApiKey: '',
     // External API Keys
     tmdbApiKey: '',
     fanartApiKey: '',
@@ -531,7 +537,14 @@ function App() {
   }, []);  // Setup WebSocket connection when authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      const newSocket = io(process.env.NODE_ENV === 'production' ? 'https://surge.video' : 'http://localhost:5001', {
+      // Socket URL: explicit override > prod default > nothing (dev w/ no backend).
+      const socketUrl =
+        process.env.REACT_APP_SOCKET_URL ||
+        (process.env.NODE_ENV === 'production' ? 'https://surge.video' : '');
+      if (!socketUrl) {
+        return; // No backend configured; skip realtime updates during design eval.
+      }
+      const newSocket = io(socketUrl, {
         transports: ['websocket']
       });
 
@@ -891,31 +904,16 @@ function App() {
             </Stepper>
           </Box>
           <Box sx={{ flex: 1, minHeight: 400, my: 4, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-            {activeStep === 1 && (
+            {activeStep === 0 && (
               <MediaServerStep config={config} setConfig={setConfig} coreServers={coreServers} />
             )}
-            {activeStep === 2 && (
-              <StorageConfigStep
-                config={config}
-                setConfig={setConfig}
-                nextButton={
-                  <Button
-                    disableRipple
-                    disableElevation
-                    disabled={!config.storagePath}
-                    onClick={handleNext}
-                    variant="outlined"
-                    sx={{ color: '#fff', borderColor: '#fff', boxShadow: 'none', '&:hover': { boxShadow: 'none' }, '&:focus': { boxShadow: 'none', outline: 'none' }, '&.Mui-focusVisible': { boxShadow: 'none', outline: 'none' } }}
-                  >
-                    Next
-                  </Button>
-                }
-              />
+            {activeStep === 1 && (
+              <StorageConfigStep config={config} setConfig={setConfig} />
             )}
-            {activeStep === 3 && (
+            {activeStep === 2 && (
               <ExternalAPIStep config={config} setConfig={setConfig} />
             )}
-            {activeStep === 4 && (
+            {activeStep === 3 && (
               <AdditionalServicesStep
                 contentEnhancementList={contentEnhancementList}
                 contentEnhancement={contentEnhancement}
@@ -931,7 +929,7 @@ function App() {
                 handleChange={handleChange}
               />
             )}
-            {activeStep === 5 && (
+            {activeStep === 4 && (
               <Box>
                 <Typography variant="h6" style={{ color: '#fff', mb: 2 }}>Deploy Services</Typography>
                 
@@ -987,7 +985,7 @@ function App() {
           </Box>
           <Box display="flex" justifyContent="space-between" sx={{ mt: 'auto', mb: 2, px: 2, py: 1, borderRadius: 2, background: 'transparent', border: 'none' }}>
             {activeStep === 0 ? (
-              // Hide Back button on Welcome screen
+              // Hide Back button on the first step (Media Server)
               <div />
             ) : (
               <Button disabled={activeStep === 0} onClick={handleBack} variant="outlined" disableRipple disableElevation sx={{ color: '#fff', borderColor: '#fff', boxShadow: 'none', '&:hover': { boxShadow: 'none' }, '&:focus': { boxShadow: 'none', outline: 'none' }, '&.Mui-focusVisible': { boxShadow: 'none', outline: 'none' } }}>Back</Button>
@@ -997,11 +995,12 @@ function App() {
               disableRipple
               disableElevation
               disabled={
-                (activeStep === 2 && !config.storagePath) ||
+                (activeStep === 1 && !config.platform) ||
+                (activeStep === 1 && config.platform === 'docker' && !config.docker?.rootPath?.trim()) ||
                 activeStep === steps.length - 1
               }
               onClick={() => {
-                if (activeStep === 1 && !config.mediaServer) {
+                if (activeStep === 0 && !config.mediaServer) {
                   setShowNoMediaServerDialog(true);
                 } else {
                   handleNext();
