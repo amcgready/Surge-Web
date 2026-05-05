@@ -77,14 +77,44 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
 
+      - name: SSH key sanity check
+        # Diagnostic — narrows down "Permission denied" causes.
+        # Reads the *private* key but only emits public-derived info,
+        # so it's safe to log. After this step succeeds in a run,
+        # you can usually drop it back out.
+        run: |
+          echo "=== Key file ==="
+          ls -la ~/.ssh/id_ed25519 || { echo "MISSING"; exit 1; }
+          echo
+          echo "=== Key parses? (fingerprint, paste-safe) ==="
+          ssh-keygen -l -f ~/.ssh/id_ed25519 \
+            || { echo "ERROR: secret SSH_PRIVATE_KEY is malformed"; exit 1; }
+          echo
+          echo "=== Public key derived from private key ==="
+          echo "Append this single line to ~/.ssh/authorized_keys"
+          echo "on the SFTP server (as the SFTP user) if it isn't"
+          echo "already there:"
+          echo "---"
+          ssh-keygen -y -f ~/.ssh/id_ed25519 \
+            || { echo "ERROR: could not derive pubkey"; exit 1; }
+          echo "---"
+          echo
+          echo "=== known_hosts entries ==="
+          wc -l ~/.ssh/known_hosts 2>/dev/null || echo "(no known_hosts yet)"
+
       - name: Raw SSH preflight (auth + network)
         env:
           SSH_HOST: ${{ secrets.SFTP_HOST }}
           SSH_PORT: ${{ secrets.SFTP_PORT }}
           SSH_USER: ${{ secrets.SFTP_USERNAME }}
         run: |
-          ssh -o BatchMode=yes -p "${SSH_PORT}" -i ~/.ssh/id_ed25519 \
-              "${SSH_USER}@${SSH_HOST}" 'echo ok && whoami && pwd'
+          # -vvv on the first attempt gives us the negotiation log so
+          # we can see whether the server even *received* the key.
+          # Look for "Offering public key:" followed by either
+          # "Server accepts key:" (success) or "Authentications that
+          # can continue:" (rejected — pubkey isn't on the server).
+          ssh -vvv -o BatchMode=yes -p "${SSH_PORT}" -i ~/.ssh/id_ed25519 \
+              "${SSH_USER}@${SSH_HOST}" 'echo ok && whoami && pwd' 2>&1 | tail -80
 
       - name: Wipe target directory before upload
         env:
