@@ -629,6 +629,11 @@ ${paletteToCssVars(palettes.light)}
           box-shadow: none !important;
           outline: none !important;
         }
+        /* Surge logo: white-on-transparent PNG. In light mode, invert
+           to black-on-transparent so it reads against the light bg. */
+        :root[data-surge-mode="light"] .surge-logo {
+          filter: invert(1);
+        }
       `}</style>
       {jsonParseError && (
         <div style={{ background: '#ffdddd', color: '#900', padding: 16, margin: 16, border: '2px solid #900', borderRadius: 8, fontFamily: 'monospace', whiteSpace: 'pre-wrap', zIndex: 9999 }}>
@@ -680,9 +685,9 @@ ${paletteToCssVars(palettes.light)}
                     sx={{
                       minWidth: 0,
                       px: 1.25,
-                      color: '#fff',
-                      borderColor: 'rgba(255,255,255,0.3)',
-                      '&:hover': { borderColor: '#fff' },
+                      color: 'var(--surge-text-primary)',
+                      borderColor: 'var(--surge-border)',
+                      '&:hover': { borderColor: 'var(--surge-text-primary)' },
                     }}
                   >
                     ⚙
@@ -697,9 +702,9 @@ ${paletteToCssVars(palettes.light)}
                     sx={{
                       minWidth: 0,
                       px: 1.25,
-                      color: '#fff',
-                      borderColor: 'rgba(255,255,255,0.3)',
-                      '&:hover': { borderColor: '#fff' },
+                      color: 'var(--surge-text-primary)',
+                      borderColor: 'var(--surge-border)',
+                      '&:hover': { borderColor: 'var(--surge-text-primary)' },
                     }}
                   >
                     ?
@@ -717,9 +722,9 @@ ${paletteToCssVars(palettes.light)}
                     sx={{
                       minWidth: 0,
                       px: 1.25,
-                      color: '#fff',
-                      borderColor: 'rgba(255,255,255,0.3)',
-                      '&:hover': { borderColor: '#fff' },
+                      color: 'var(--surge-text-primary)',
+                      borderColor: 'var(--surge-border)',
+                      '&:hover': { borderColor: 'var(--surge-text-primary)' },
                     }}
                   >
                     {colorMode === 'dark' ? '☀' : '☾'}
@@ -742,9 +747,9 @@ ${paletteToCssVars(palettes.light)}
                     variant="outlined"
                     size="small"
                     sx={{
-                      color: '#fff',
-                      borderColor: 'rgba(255,255,255,0.3)',
-                      '&:hover': { borderColor: '#fff' }
+                      color: 'var(--surge-text-primary)',
+                      borderColor: 'var(--surge-border)',
+                      '&:hover': { borderColor: 'var(--surge-text-primary)' }
                     }}
                   >
                     Reset wizard
@@ -752,7 +757,7 @@ ${paletteToCssVars(palettes.light)}
                 </Tooltip>
               </Box>
             </Box>
-            <Typography variant="h4" align="center" gutterBottom style={{ color: '#fff' }}>
+            <Typography variant="h4" align="center" gutterBottom style={{ color: 'var(--surge-text-primary)' }}>
               Surge Setup
             </Typography>
             {restoredFromStorage && (
@@ -856,16 +861,37 @@ ${paletteToCssVars(palettes.light)}
                     borderRadius: 2,
                   }}
                 >
-                  <Typography style={{ color: '#79eaff', fontSize: 14, fontWeight: 600 }}>
-                    Backend pending
+                  <Typography style={{ color: 'var(--surge-accent)', fontSize: 14, fontWeight: 600 }}>
+                    How deploy works
                   </Typography>
-                  <Typography style={{ color: '#cfd8dc', fontSize: 13, marginTop: 4 }}>
-                    The deploy orchestrator that consumes this preview
-                    (materializes secrets, writes config files, runs the
-                    fetch/post-deploy scripts in dependency order, and
-                    executes <code>docker compose up</code>) is the next
-                    big build. Until it lands, the wizard captures
-                    everything that deploy will need — visible above.
+                  <Typography style={{ color: 'var(--surge-text-secondary)', fontSize: 13, marginTop: 4 }}>
+                    Click <strong>Generate deploy bundle</strong> to download
+                    a ZIP containing <code>docker-compose.yaml</code>,{' '}
+                    <code>config.json</code>, the seeded config files, and{' '}
+                    <code>surge_orchestrator.py</code> (stdlib-only Python).
+                    On your target host, unzip and run:
+                  </Typography>
+                  <Box component="pre" sx={{
+                    mt: 1, mb: 0, p: 1,
+                    background: 'rgba(0,0,0,0.35)',
+                    borderRadius: 1,
+                    fontFamily: 'monospace', fontSize: 12,
+                    color: 'var(--surge-text-primary)',
+                    overflowX: 'auto',
+                  }}>
+{`python3 surge_orchestrator.py \\
+  --manifest manifest.json \\
+  --config   config.json`}
+                  </Box>
+                  <Typography style={{ color: 'var(--surge-text-secondary)', fontSize: 13, marginTop: 8 }}>
+                    The orchestrator materializes secrets, writes config
+                    files, runs the fetch/post-deploy scripts in dependency
+                    order, and executes <code>docker compose up</code>. Pass{' '}
+                    <code>--dry-run</code> to preview without writing or
+                    starting anything;{' '}
+                    <code>--backup</code>, <code>--restore</code>, and{' '}
+                    <code>--status</code> handle lifecycle ops once the
+                    stack is live.
                   </Typography>
                 </Box>
               </Box>
@@ -876,7 +902,7 @@ ${paletteToCssVars(palettes.light)}
               // Hide Back button on the first step (Media Server)
               <div />
             ) : (
-              <Button disabled={activeStep === 0} onClick={handleBack} variant="outlined" disableRipple disableElevation sx={{ color: '#fff', borderColor: '#fff', boxShadow: 'none', '&:hover': { boxShadow: 'none' }, '&:focus': { boxShadow: 'none', outline: 'none' }, '&.Mui-focusVisible': { boxShadow: 'none', outline: 'none' } }}>Back</Button>
+              <Button disabled={activeStep === 0} onClick={handleBack} variant="outlined" disableRipple disableElevation sx={{ color: 'var(--surge-text-primary)', borderColor: 'var(--surge-text-primary)', boxShadow: 'none', '&:hover': { boxShadow: 'none' }, '&:focus': { boxShadow: 'none', outline: 'none' }, '&.Mui-focusVisible': { boxShadow: 'none', outline: 'none' } }}>Back</Button>
             )}
 
             <Button
@@ -895,7 +921,7 @@ ${paletteToCssVars(palettes.light)}
                 }
               }}
               variant="outlined"
-              sx={{ color: '#fff', borderColor: '#fff', boxShadow: 'none', '&:hover': { boxShadow: 'none' }, '&:focus': { boxShadow: 'none', outline: 'none' }, '&.Mui-focusVisible': { boxShadow: 'none', outline: 'none' } }}
+              sx={{ color: 'var(--surge-text-primary)', borderColor: 'var(--surge-text-primary)', boxShadow: 'none', '&:hover': { boxShadow: 'none' }, '&:focus': { boxShadow: 'none', outline: 'none' }, '&.Mui-focusVisible': { boxShadow: 'none', outline: 'none' } }}
             >
               Next
             </Button>

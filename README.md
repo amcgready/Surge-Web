@@ -1,4 +1,8 @@
-# Surge
+<p align="center">
+  <img src="frontend/src/assets/Surge.png" alt="Surge" width="360" />
+</p>
+
+<h1 align="center">Surge</h1>
 
 A wizard for self-hosted media stacks. Pick your services in the
 browser, get a single ZIP with everything you need to run them
