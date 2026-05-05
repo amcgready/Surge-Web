@@ -3,21 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@mui/material": "^5.15.0",
-    "@mui/icons-material": "^5.15.0",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/material": "^5.15.0",
     "axios": "^1.7.2",
+    "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "socket.io-client": "^4.7.2"
   },
   "scripts": {
+    "copy-deploy-assets": "node scripts/copy-deploy-assets.js",
+    "prestart": "npm run copy-deploy-assets",
+    "prebuild": "npm run copy-deploy-assets",
+    "pretest": "npm run copy-deploy-assets",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint 'src/**/*.{js,jsx}'",
+    "lint:fix": "eslint 'src/**/*.{js,jsx}' --fix",
+    "format": "prettier --write 'src/**/*.{js,jsx,json,css,md}'",
+    "format:check": "prettier --check 'src/**/*.{js,jsx,json,css,md}'"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5"
   },
   "browserslist": {
     "production": [

@@ -32,18 +32,45 @@ const DOCKER_DEFAULTS = {
 
 const inputSx = {
   '& .MuiOutlinedInput-root': {
-    color: '#fff',
-    background: '#222',
-    '& fieldset': { borderColor: '#444' },
+    color: 'var(--surge-text-primary)',
+    background: 'var(--surge-input-bg)',
+    '& fieldset': { borderColor: 'var(--surge-border)' },
     '&:hover fieldset': { borderColor: '#07938f' },
     '&.Mui-focused fieldset': { borderColor: '#07938f' },
   },
-  '& .MuiInputLabel-root': { color: '#aaa' },
+  '& .MuiInputLabel-root': { color: 'var(--surge-text-muted)' },
   '& .MuiInputLabel-root.Mui-focused': { color: '#07938f' },
 };
 
+// Compute the resolved host paths Surge will use given the wizard
+// config. Mirrors orchestrator/surge_orchestrator.py's PathResolver
+// — keep in sync if either changes.
+function resolvePaths(config) {
+  const platform = config.platform || '';
+  if (platform === 'unraid') {
+    const cachePath   = config.unraid?.cachePath   || '/mnt/cache';
+    const appdataPath = config.unraid?.appdataPath || '/mnt/user/appdata';
+    const useCache    = !!config.unraid?.useCacheDrive;
+    return {
+      mediaRoot:      useCache ? cachePath : '/mnt/user',
+      configRoot:     useCache ? appdataPath : '/mnt/user/appdata',
+      userSharesRoot: '/mnt/user',
+    };
+  }
+  if (platform === 'docker') {
+    const rootPath = config.docker?.rootPath || '/opt/surge';
+    return {
+      mediaRoot:      rootPath,
+      configRoot:     rootPath,
+      userSharesRoot: rootPath,
+    };
+  }
+  return null;
+}
+
 const StorageConfigStep = ({ config, setConfig }) => {
   const selected = config.platform;
+  const resolved = resolvePaths(config);
   const unraid = config.unraid || UNRAID_DEFAULTS;
   const docker = config.docker || DOCKER_DEFAULTS;
 
@@ -73,10 +100,10 @@ const StorageConfigStep = ({ config, setConfig }) => {
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography variant="h6" align="center" style={{ color: '#fff', marginBottom: 8 }}>
+      <Typography variant="h6" align="center" style={{ color: 'var(--surge-text-primary)', marginBottom: 16 }}>
         Storage Config
       </Typography>
-      <Typography align="center" style={{ color: '#aaa', fontSize: 14, marginBottom: 24 }}>
+      <Typography align="center" style={{ color: 'var(--surge-text-muted)', fontSize: 14, marginBottom: 24 }}>
         Where will Surge deploy your stack?
       </Typography>
 
@@ -100,7 +127,7 @@ const StorageConfigStep = ({ config, setConfig }) => {
                 width: 180,
                 height: 200,
                 borderRadius: 2,
-                background: '#181818',
+                background: 'var(--surge-panel-bg)',
                 border: active ? '2px solid #07938f' : '2px solid transparent',
                 transition: 'border-color 0.15s, transform 0.15s',
                 display: 'flex',
@@ -128,10 +155,10 @@ const StorageConfigStep = ({ config, setConfig }) => {
                   marginBottom: 12,
                 }}
               />
-              <Typography style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>
+              <Typography style={{ color: 'var(--surge-text-primary)', fontSize: 18, fontWeight: 600 }}>
                 {p.name}
               </Typography>
-              <Typography style={{ color: '#aaa', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+              <Typography style={{ color: 'var(--surge-text-muted)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
                 {p.desc}
               </Typography>
             </Box>
@@ -148,10 +175,10 @@ const StorageConfigStep = ({ config, setConfig }) => {
             p: 3,
             borderRadius: 2,
             background: '#1d1d1d',
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--surge-border-subtle)',
           }}
         >
-          <Typography style={{ color: '#fff', fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+          <Typography style={{ color: 'var(--surge-text-primary)', fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
             Unraid setup
           </Typography>
 
@@ -165,13 +192,13 @@ const StorageConfigStep = ({ config, setConfig }) => {
             }}
           >
             <Typography
-              style={{ color: '#79eaff', fontWeight: 600, fontSize: 13, marginBottom: 4 }}
+              style={{ color: 'var(--surge-accent)', fontWeight: 600, fontSize: 13, marginBottom: 4 }}
             >
               Heads up
             </Typography>
-            <Typography style={{ color: '#cfd8dc', fontSize: 13, lineHeight: 1.5 }}>
+            <Typography style={{ color: 'var(--surge-text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
               Surge clones each selected service into{' '}
-              <code style={{ background: '#0a0a0a', padding: '1px 6px', borderRadius: 3, color: '#79eaff' }}>
+              <code style={{ background: '#0a0a0a', padding: '1px 6px', borderRadius: 3, color: 'var(--surge-accent)' }}>
                 /mnt/user/appdata/&lt;service&gt;
               </code>
               , which is already Unraid's default under Settings → Docker → "Default
@@ -192,12 +219,12 @@ const StorageConfigStep = ({ config, setConfig }) => {
               />
             }
             label={
-              <Typography style={{ color: '#fff' }}>
+              <Typography style={{ color: 'var(--surge-text-primary)' }}>
                 I use a cache drive
               </Typography>
             }
           />
-          <Typography style={{ color: '#888', fontSize: 12, marginLeft: 1, marginBottom: 16 }}>
+          <Typography style={{ color: 'var(--surge-text-dim)', fontSize: 12, marginLeft: 1, marginBottom: 16 }}>
             Surge will route active downloads to the cache so the array isn't hit on every write.
           </Typography>
 
@@ -224,14 +251,14 @@ const StorageConfigStep = ({ config, setConfig }) => {
             p: 3,
             borderRadius: 2,
             background: '#1d1d1d',
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--surge-border-subtle)',
           }}
         >
-          <Typography style={{ color: '#fff', fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+          <Typography style={{ color: 'var(--surge-text-primary)', fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
             Docker setup
           </Typography>
 
-          <Typography style={{ color: '#aaa', fontSize: 13, lineHeight: 1.5, marginBottom: 16 }}>
+          <Typography style={{ color: 'var(--surge-text-muted)', fontSize: 13, lineHeight: 1.5, marginBottom: 16 }}>
             Pick one host directory and Surge will root every service under it —
             configs, downloads, and media all live below this path.
           </Typography>
@@ -245,15 +272,123 @@ const StorageConfigStep = ({ config, setConfig }) => {
             sx={inputSx}
             InputLabelProps={{ shrink: true }}
             helperText={
-              <span style={{ color: '#888' }}>
-                Example layout: <code style={{ color: '#79eaff' }}>{(docker.rootPath || '/opt/surge')}/configs</code>,{' '}
-                <code style={{ color: '#79eaff' }}>{(docker.rootPath || '/opt/surge')}/downloads</code>,{' '}
-                <code style={{ color: '#79eaff' }}>{(docker.rootPath || '/opt/surge')}/media</code>
+              <span style={{ color: 'var(--surge-text-dim)' }}>
+                Example layout: <code style={{ color: 'var(--surge-accent)' }}>{(docker.rootPath || '/opt/surge')}/configs</code>,{' '}
+                <code style={{ color: 'var(--surge-accent)' }}>{(docker.rootPath || '/opt/surge')}/downloads</code>,{' '}
+                <code style={{ color: 'var(--surge-accent)' }}>{(docker.rootPath || '/opt/surge')}/media</code>
               </span>
             }
           />
         </Box>
       )}
+
+      {/* Resolved-path preview — confirms the path tokens used
+          throughout the schema (mediaRoot, configRoot, userSharesRoot)
+          will land on the host paths the user expects. Stays hidden
+          until the user picks a platform. */}
+      {selected && resolved && (
+        <Box sx={{
+          mt: 4, p: 2,
+          background: '#0d1f1e',
+          border: '1px solid #07938f',
+          borderRadius: 1,
+        }}>
+          <Typography style={{
+            color: 'var(--surge-text-primary)', fontSize: 14, fontWeight: 600,
+            letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 4,
+          }}>
+            Resolved host paths
+          </Typography>
+          <Typography style={{ color: 'var(--surge-text-muted)', fontSize: 12, marginBottom: 12 }}>
+            Surge's path tokens will resolve to these directories on
+            your deploy target. Every service's config lives under
+            <code style={{ color: 'var(--surge-accent)', margin: '0 4px' }}>configRoot</code>;
+            its media + downloads under
+            <code style={{ color: 'var(--surge-accent)', margin: '0 4px' }}>mediaRoot</code>.
+          </Typography>
+          <Box component="ul" sx={{
+            m: 0, pl: 2, color: 'var(--surge-text-secondary)', fontSize: 13, lineHeight: 1.8,
+            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
+            listStyle: 'none',
+          }}>
+            <li>
+              <span style={{ color: '#07938f', display: 'inline-block', minWidth: 130 }}>mediaRoot</span>
+              <span>→ {resolved.mediaRoot}/media</span>
+              <span style={{ color: 'var(--surge-text-dim)', marginLeft: 8, fontSize: 11 }}>
+                {' '}(libraries, downloads, intake)
+              </span>
+            </li>
+            <li>
+              <span style={{ color: '#07938f', display: 'inline-block', minWidth: 130 }}>configRoot</span>
+              <span>→ {resolved.configRoot}/&lt;service&gt;</span>
+              <span style={{ color: 'var(--surge-text-dim)', marginLeft: 8, fontSize: 11 }}>
+                {' '}(per-service config dirs)
+              </span>
+            </li>
+            <li>
+              <span style={{ color: '#07938f', display: 'inline-block', minWidth: 130 }}>userSharesRoot</span>
+              <span>→ {resolved.userSharesRoot}</span>
+              <span style={{ color: 'var(--surge-text-dim)', marginLeft: 8, fontSize: 11 }}>
+                {' '}(Unraid shares root, occasionally referenced)
+              </span>
+            </li>
+          </Box>
+          {selected === 'unraid' && !config.unraid?.useCacheDrive && (
+            <Typography style={{ color: 'var(--surge-warning)', fontSize: 12, marginTop: 8 }}>
+              ⓘ Cache drive disabled — both media and config will live on{' '}
+              <code style={{ color: 'var(--surge-accent)' }}>/mnt/user</code> (slower, no cache).
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      {/* User / Group / Umask — flows into PUID/PGID/UMASK env on every
+          container. Defaults match Unraid's nobody:users (99:100); Docker
+          hosts often want the deploying user's UID (`id -u` on Linux) and
+          GID instead so written files are owned correctly. */}
+      <Box sx={{ mt: 4, p: 2, background: 'var(--surge-panel-bg)', border: '1px solid var(--surge-border-subtle)', borderRadius: 1 }}>
+        <Typography style={{
+          color: 'var(--surge-text-primary)', fontSize: 14, fontWeight: 600,
+          letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 4,
+        }}>
+          File ownership (PUID / PGID)
+        </Typography>
+        <Typography style={{ color: 'var(--surge-text-muted)', fontSize: 12, marginBottom: 12 }}>
+          Containers run as this UID:GID. Defaults are <code style={{ color: 'var(--surge-accent)' }}>99:100</code>{' '}
+          (Unraid's nobody:users). On a Docker host, run <code style={{ color: 'var(--surge-accent)' }}>id -u</code>{' '}
+          and <code style={{ color: 'var(--surge-accent)' }}>id -g</code> to find the right values for the user
+          who owns your media folder.
+        </Typography>
+        <Box display="flex" gap={2} flexWrap="wrap">
+          <TextField
+            size="medium"
+            label="PUID"
+            value={config.userId ?? ''}
+            onChange={(e) => setConfig((p) => ({ ...p, userId: e.target.value.replace(/[^0-9]/g, '') }))}
+            placeholder="99"
+            sx={{ ...inputSx, width: 120 }}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            size="medium"
+            label="PGID"
+            value={config.groupId ?? ''}
+            onChange={(e) => setConfig((p) => ({ ...p, groupId: e.target.value.replace(/[^0-9]/g, '') }))}
+            placeholder="100"
+            sx={{ ...inputSx, width: 120 }}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            size="medium"
+            label="UMASK"
+            value={config.umask ?? ''}
+            onChange={(e) => setConfig((p) => ({ ...p, umask: e.target.value.replace(/[^0-7]/g, '') }))}
+            placeholder="022"
+            sx={{ ...inputSx, width: 120 }}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+      </Box>
     </Box>
   );
 };

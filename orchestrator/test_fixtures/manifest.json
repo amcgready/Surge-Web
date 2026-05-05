@@ -1,0 +1,1606 @@
+{
+  "serviceMeta": {
+    "bazarr": {
+      "name": "Bazarr",
+      "desc": "Subtitle manager",
+      "category": "media",
+      "repo": "https://github.com/morpheus65535/bazarr",
+      "compose": {
+        "image": "linuxserver/bazarr:latest",
+        "ports": [
+          "6767:6767"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:6767/ || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "configIni": {
+            "hostPath": "configRoot/<service>/config/config.ini",
+            "content": "[general]\napikey = ${apiKey}\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ],
+        "postDeployScript": {
+          "path": "scripts/configure-bazarr.py",
+          "blocks": [],
+          "env": {
+            "BAZARR_API_KEY": {
+              "fromSecret": "apiKey"
+            },
+            "SONARR_API_KEY": {
+              "whenService": "sonarr",
+              "fromServiceSecret": "sonarr",
+              "secret": "apiKey"
+            },
+            "RADARR_API_KEY": {
+              "whenService": "radarr",
+              "fromServiceSecret": "radarr",
+              "secret": "apiKey"
+            },
+            "PLEX_TOKEN": {
+              "whenMediaServer": "plex",
+              "fromService": "plex",
+              "field": "plexToken"
+            }
+          }
+        }
+      }
+    },
+    "boxarr": {
+      "name": "Boxarr",
+      "desc": "Automatically track and add trending box office movies to your Radarr library",
+      "category": "metadata",
+      "repo": "https://github.com/iongpt/boxarr",
+      "compose": {
+        "image": "ghcr.io/iongpt/boxarr:latest",
+        "ports": [
+          "8888:8888"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8888/api/health || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ],
+        "postDeployScript": {
+          "path": "scripts/configure-boxarr.py",
+          "blocks": [],
+          "env": {
+            "RADARR_URL": {
+              "whenService": "radarr",
+              "value": "http://localhost:7878"
+            },
+            "RADARR_API_KEY": {
+              "whenService": "radarr",
+              "fromServiceSecret": "radarr",
+              "secret": "apiKey"
+            }
+          }
+        }
+      }
+    },
+    "cinesync": {
+      "name": "CineSync",
+      "desc": "Media folder manager",
+      "category": "media",
+      "repo": "https://github.com/sureshfizzy/CineSync",
+      "compose": {
+        "image": "sureshfizzy/cinesync:latest",
+        "ports": [
+          "5173:5173",
+          "8082:8082"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8082/api/config-status || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "files": {
+          "envFile": {
+            "hostPath": "configRoot/<service>/.env",
+            "content": "# Seeded by Surge — see AdditionalServicesStep.js cinesync entry.\n# CineSync re-reads this on container start; edit and restart\n# the container if you change paths or toggles post-deploy.\n\n# Sources to watch (comma-separated). /media/Intake is the\n# parent of every Surge-managed downloader Intake folder\n# (zurg, nzbdav, decypharr, sabnzbd, etc.). CineSync walks\n# recursively so any enabled downloader gets discovered\n# without needing to retemplate this file per deploy.\nSOURCE_DIR=/media/Intake\n\n# Destination root. CineSync creates Movies/ and Shows/\n# (always) plus AnimeMovies/AnimeShows/4KMovies/4KShows\n# (only when the corresponding toggle below is true).\n# Kept in its own tree (host: mediaRoot/media/output/CineSync,\n# container: /media/output/CineSync) so it doesn't collide\n# with Sonarr/Radarr-managed library paths (/media/tv,\n# /media/movies). The *arrs continue to own their library\n# trees; CineSync runs in parallel as an auto-organizer for\n# downloaded content.\nDESTINATION_DIR=/media/output/CineSync\n\n# Category-separation toggles, driven by the wizard's\n# \"CineSync settings\" panel (Service Selection step). Both\n# default off so the only folders CineSync creates by\n# default are Movies/ and Shows/, which matches the two\n# Plex libraries configure-plex.py auto-creates on the\n# CineSync side. The same toggles drive Plex's library\n# auto-creation — flipping a toggle on in the wizard adds\n# both the CineSync subfolder AND the matching Plex\n# library on next deploy.\n#\n# Pinned explicitly here because CineSync's upstream\n# defaults are inconsistent between its Go service\n# (defaults true) and Python service (defaults false for\n# ANIME_SEPARATION); leaving these unset would leak that\n# ambiguity into the deploy.\nANIME_SEPARATION=${cinesyncSettings.animeSeparation}\n4K_SEPARATION=${cinesyncSettings.fourKSeparation}\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/app/db"
+          },
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          }
+        ]
+      }
+    },
+    "decypharr": {
+      "name": "Decypharr",
+      "desc": "qBittorrent-API w/ Debrid support",
+      "category": "downloads",
+      "repo": "https://github.com/sirrobot01/decypharr",
+      "compose": {
+        "image": "cy01/blackhole:latest",
+        "ports": [
+          "8282:8282"
+        ],
+        "files": {
+          "configJson": {
+            "hostPath": "configRoot/<service>/config.json",
+            "content": "{\n  \"debrids\": [\n    {\n      \"provider\": \"realdebrid\",\n      \"name\": \"RealDebrid\",\n      \"api_key\": \"${rdApiToken}\",\n      \"folder\": \"/mnt/Intake/decypharr/realdebrid\"\n    },\n    {\n      \"provider\": \"alldebrid\",\n      \"name\": \"AllDebrid\",\n      \"api_key\": \"${adApiToken}\",\n      \"folder\": \"/mnt/Intake/decypharr/alldebrid\"\n    }\n  ],\n  \"log_level\": \"info\",\n  \"use_auth\": false\n}\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "mediaRoot/media",
+            "dst": "/mnt"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/app"
+          }
+        ]
+      }
+    },
+    "episeerr": {
+      "name": "Episeerr",
+      "desc": "Per-episode request handling",
+      "category": "media",
+      "repo": "https://github.com/Vansmak/episeerr",
+      "compose": {
+        "image": "vansmak/episeerr:latest",
+        "ports": [
+          "5002:5002"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:5002/ || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/app/config"
+          },
+          {
+            "src": "configRoot/<service>/logs",
+            "dst": "/app/logs"
+          },
+          {
+            "src": "configRoot/<service>/data",
+            "dst": "/app/data"
+          },
+          {
+            "src": "configRoot/<service>/temp",
+            "dst": "/app/temp"
+          }
+        ],
+        "env": {
+          "TMDB_API_KEY": {
+            "fromConfig": "tmdbApiKey",
+            "defaultValue": ""
+          },
+          "SONARR_URL": {
+            "whenService": "sonarr",
+            "value": "http://localhost:8989"
+          },
+          "SONARR_API_KEY": {
+            "whenService": "sonarr",
+            "fromServiceSecret": "sonarr",
+            "secret": "apiKey"
+          },
+          "RADARR_URL": {
+            "whenService": "radarr",
+            "value": "http://localhost:7878"
+          },
+          "RADARR_API_KEY": {
+            "whenService": "radarr",
+            "fromServiceSecret": "radarr",
+            "secret": "apiKey"
+          },
+          "TAUTULLI_URL": {
+            "whenService": "tautulli",
+            "value": "http://localhost:8181"
+          },
+          "TAUTULLI_API_KEY": {
+            "whenService": "tautulli",
+            "fromServiceSecret": "tautulli",
+            "secret": "apiKey"
+          },
+          "PLEX_URL": {
+            "whenMediaServer": "plex",
+            "value": "http://localhost:32400"
+          },
+          "PLEX_TOKEN": {
+            "whenMediaServer": "plex",
+            "fromService": "plex",
+            "field": "plexToken"
+          },
+          "JELLYFIN_URL": {
+            "whenMediaServer": "jellyfin",
+            "value": "http://localhost:8096"
+          },
+          "JELLYFIN_API_KEY": {
+            "whenMediaServer": "jellyfin",
+            "fromService": "jellyfin",
+            "field": "apiKey"
+          },
+          "JELLYFIN_USER_ID": {
+            "whenMediaServer": "jellyfin",
+            "fromService": "jellyfin",
+            "field": "userId"
+          },
+          "EMBY_URL": {
+            "whenMediaServer": "emby",
+            "value": "http://localhost:8096"
+          },
+          "EMBY_API_KEY": {
+            "whenMediaServer": "emby",
+            "fromService": "emby",
+            "field": "apiKey"
+          },
+          "EMBY_USER_ID": {
+            "whenMediaServer": "emby",
+            "fromService": "emby",
+            "field": "userId"
+          }
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-episeerr.py",
+          "blocks": [],
+          "env": {
+            "PROWLARR_URL": {
+              "whenService": "prowlarr",
+              "value": "http://localhost:9696"
+            },
+            "PROWLARR_API_KEY": {
+              "whenService": "prowlarr",
+              "fromServiceSecret": "prowlarr",
+              "secret": "apiKey"
+            },
+            "SABNZBD_URL": {
+              "whenService": "sabnzbd",
+              "value": "http://localhost:8080"
+            },
+            "SABNZBD_API_KEY": {
+              "whenService": "sabnzbd",
+              "fromServiceSecret": "sabnzbd",
+              "secret": "apiKey"
+            }
+          }
+        }
+      }
+    },
+    "flaresolverr": {
+      "name": "Flaresolverr",
+      "desc": "Cloudflare bypass proxy",
+      "category": "indexers",
+      "repo": "https://github.com/FlareSolverr/FlareSolverr",
+      "compose": {
+        "image": "flaresolverr/flaresolverr:latest",
+        "ports": [
+          "8191:8191"
+        ],
+        "mounts": [],
+        "env": {
+          "LOG_LEVEL": "info"
+        }
+      }
+    },
+    "gaps": {
+      "name": "GAPS",
+      "desc": "Missing movies finder",
+      "category": "media",
+      "repo": "https://github.com/JasonHHouse/gaps",
+      "compose": {
+        "image": "housewrecker/gaps:latest",
+        "ports": [
+          "8484:8484"
+        ],
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/usr/data"
+          }
+        ],
+        "env": {
+          "ENABLE_SSL": "false",
+          "ENABLE_LOGIN": "false",
+          "BASE_URL": "/"
+        }
+      }
+    },
+    "kometa": {
+      "name": "Kometa",
+      "desc": "Collection and metadata manager",
+      "category": "metadata",
+      "repo": "https://github.com/kometa-team/kometa",
+      "compose": {
+        "image": "lscr.io/linuxserver/kometa:latest",
+        "ports": [],
+        "mounts": [
+          {
+            "src": "mediaRoot/media/assets",
+            "dst": "/assets"
+          },
+          {
+            "src": "configRoot/plex/Library/Application Support/Plex Media Server/",
+            "dst": "/plex"
+          },
+          {
+            "src": "configRoot/radarr",
+            "dst": "/radarr"
+          },
+          {
+            "src": "configRoot/sonarr",
+            "dst": "/sonarr"
+          },
+          {
+            "src": "mediaRoot/media/movies",
+            "dst": "/movies"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ],
+        "env": {
+          "KOMETA_TIMES": "00:00",
+          "KOMETA_RUN": "False",
+          "KOMETA_TESTS": "False",
+          "KOMETA_NO_MISSING": "True"
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-kometa.py",
+          "blocks": [],
+          "env": {
+            "KOMETA_CONFIG_PATH": "configRoot/<service>/config.yml",
+            "PLEX_URL": {
+              "whenMediaServer": "plex",
+              "value": "http://localhost:32400"
+            },
+            "PLEX_TOKEN": {
+              "whenMediaServer": "plex",
+              "fromService": "plex",
+              "field": "plexToken"
+            },
+            "TMDB_API_KEY": {
+              "fromConfig": "tmdbApiKey",
+              "defaultValue": ""
+            },
+            "SONARR_URL": {
+              "whenService": "sonarr",
+              "value": "http://localhost:8989"
+            },
+            "SONARR_API_KEY": {
+              "whenService": "sonarr",
+              "fromServiceSecret": "sonarr",
+              "secret": "apiKey"
+            },
+            "RADARR_URL": {
+              "whenService": "radarr",
+              "value": "http://localhost:7878"
+            },
+            "RADARR_API_KEY": {
+              "whenService": "radarr",
+              "fromServiceSecret": "radarr",
+              "secret": "apiKey"
+            }
+          }
+        }
+      }
+    },
+    "mdblistarr": {
+      "name": "mdblistarr",
+      "desc": "MDBList integration",
+      "category": "metadata",
+      "repo": "https://github.com/linaspurinis/mdblistarr",
+      "compose": {
+        "image": "linaspurinis/mdblistarr:latest",
+        "ports": [
+          "5353:5353"
+        ],
+        "mounts": [
+          {
+            "src": "configRoot/<service>/db",
+            "dst": "/usr/src/db"
+          }
+        ],
+        "env": {
+          "CA_TS_FALLBACK_DIR": "/usr/src/db",
+          "MDBLIST_API_KEY": {
+            "fromConfig": "mdblistApiKey",
+            "defaultValue": ""
+          },
+          "SONARR_URL": {
+            "whenService": "sonarr",
+            "value": "http://localhost:8989"
+          },
+          "SONARR_API_KEY": {
+            "whenService": "sonarr",
+            "fromServiceSecret": "sonarr",
+            "secret": "apiKey"
+          },
+          "RADARR_URL": {
+            "whenService": "radarr",
+            "value": "http://localhost:7878"
+          },
+          "RADARR_API_KEY": {
+            "whenService": "radarr",
+            "fromServiceSecret": "radarr",
+            "secret": "apiKey"
+          }
+        }
+      }
+    },
+    "nzbdav": {
+      "name": "NzbDAV",
+      "desc": "WebDAV layer for usenet content",
+      "category": "downloads",
+      "repo": "https://github.com/nzbdav-dev/nzbdav",
+      "compose": {
+        "secrets": {
+          "webdavPassword": {
+            "generate": "random",
+            "length": 32
+          },
+          "frontendBackendApiKey": {
+            "generate": "random",
+            "length": 64
+          }
+        },
+        "services": {
+          "nzbdav": {
+            "image": "nzbdav/nzbdav:alpha",
+            "networkMode": "bridge",
+            "ports": [
+              "3000:3000"
+            ],
+            "mounts": [
+              {
+                "src": "configRoot/<service>",
+                "dst": "/config"
+              }
+            ],
+            "env": {
+              "FRONTEND_BACKEND_API_KEY": {
+                "fromSecret": "frontendBackendApiKey"
+              }
+            }
+          },
+          "rclone": {
+            "image": "rclone/rclone:latest",
+            "networkMode": "bridge",
+            "capAdd": [
+              "SYS_ADMIN"
+            ],
+            "securityOpt": [
+              "apparmor:unconfined"
+            ],
+            "devices": [
+              "/dev/fuse:/dev/fuse:rwm"
+            ],
+            "command": "mount nzbdav: /nzbdav --allow-other --allow-non-empty --dir-cache-time 10s --vfs-cache-mode full --vfs-cache-max-size 50G --vfs-cache-max-age 1h --buffer-size 64M --vfs-read-ahead 256M",
+            "mounts": [
+              {
+                "src": "mediaRoot/media/Intake/nzbdav",
+                "dst": "/nzbdav",
+                "options": "rshared"
+              },
+              {
+                "src": "configRoot/<service>/rclone.conf",
+                "dst": "/config/rclone/rclone.conf"
+              },
+              {
+                "src": "mediaRoot/<service>/rclone-cache",
+                "dst": "/cache"
+              }
+            ],
+            "dependsOn": {
+              "nzbdav": {}
+            }
+          }
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-nzbdav.py",
+          "blocks": [
+            "rclone"
+          ],
+          "env": {
+            "NZBDAV_PASSWORD": {
+              "fromSecret": "webdavPassword"
+            },
+            "NZBDAV_API_KEY": {
+              "fromSecret": "frontendBackendApiKey"
+            },
+            "RCLONE_CONF_PATH": "configRoot/<service>/rclone.conf"
+          }
+        }
+      }
+    },
+    "posterizarr": {
+      "name": "Posterizarr",
+      "desc": "Poster automation",
+      "category": "metadata",
+      "repo": "https://github.com/fscorrupt/posterizarr",
+      "compose": {
+        "image": "ghcr.io/fscorrupt/posterizarr:latest",
+        "ports": [
+          "8000:8000"
+        ],
+        "mounts": [
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          },
+          {
+            "src": "mediaRoot/media/assets",
+            "dst": "/assets"
+          },
+          {
+            "src": "mediaRoot/media/assets",
+            "dst": "/manualassets"
+          },
+          {
+            "src": "mediaRoot/media/assetsbackup",
+            "dst": "/assetsbackup"
+          }
+        ],
+        "env": {
+          "RUN_TIME": "22:00",
+          "TERM": "xterm"
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-posterizarr.py",
+          "blocks": [],
+          "env": {
+            "POSTERIZARR_CONFIG_PATH": "configRoot/<service>/config.json",
+            "PLEX_URL": {
+              "whenMediaServer": "plex",
+              "value": "http://localhost:32400"
+            },
+            "PLEX_TOKEN": {
+              "whenMediaServer": "plex",
+              "fromService": "plex",
+              "field": "plexToken"
+            },
+            "TMDB_API_KEY": {
+              "fromConfig": "tmdbApiKey",
+              "defaultValue": ""
+            },
+            "FANART_API_KEY": {
+              "fromConfig": "fanartApiKey",
+              "defaultValue": ""
+            },
+            "TVDB_API_KEY": {
+              "fromConfig": "tvdbApiKey",
+              "defaultValue": ""
+            }
+          }
+        }
+      }
+    },
+    "prowlarr": {
+      "name": "Prowlarr",
+      "desc": "Indexer manager",
+      "category": "indexers",
+      "repo": "https://github.com/prowlarr/prowlarr",
+      "compose": {
+        "image": "lscr.io/linuxserver/prowlarr:latest",
+        "ports": [
+          "9696:9696"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:9696/ping || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "90s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "configXml": {
+            "hostPath": "configRoot/<service>/config.xml",
+            "content": "<Config>\n  <ApiKey>${apiKey}</ApiKey>\n  <AuthenticationMethod>External</AuthenticationMethod>\n  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>\n  <UpdateMechanism>Docker</UpdateMechanism>\n  <LogLevel>info</LogLevel>\n</Config>\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "configRoot/Prowlarr-Indexers/Custom",
+            "dst": "/config/Definitions/Custom"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ],
+        "postDeployScript": {
+          "path": "scripts/configure-prowlarr.py",
+          "blocks": [],
+          "env": {
+            "PROWLARR_API_KEY": {
+              "fromSecret": "apiKey"
+            },
+            "SONARR_URL": {
+              "whenService": "sonarr",
+              "value": "http://localhost:8989"
+            },
+            "SONARR_API_KEY": {
+              "whenService": "sonarr",
+              "fromServiceSecret": "sonarr",
+              "secret": "apiKey"
+            },
+            "RADARR_URL": {
+              "whenService": "radarr",
+              "value": "http://localhost:7878"
+            },
+            "RADARR_API_KEY": {
+              "whenService": "radarr",
+              "fromServiceSecret": "radarr",
+              "secret": "apiKey"
+            },
+            "ZILEAN_URL": {
+              "whenService": "zilean",
+              "value": "http://localhost:8181"
+            },
+            "INDEXERS_DEST": "configRoot/Prowlarr-Indexers"
+          }
+        }
+      }
+    },
+    "pulsarr": {
+      "name": "Pulsarr",
+      "desc": "Plex watchlist sync to *arr",
+      "category": "requests",
+      "repo": "https://github.com/jamcalli/pulsarr",
+      "compose": {
+        "image": "lakker/pulsarr:latest",
+        "ports": [
+          "3003:3003"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:3003/api/v1/config || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/app/data"
+          }
+        ],
+        "env": {
+          "cookieSecured": "false",
+          "basePath": "/",
+          "authenticationMethod": "required",
+          "allowIframes": "false",
+          "enableRequestLogging": "false",
+          "dbType": "sqlite",
+          "dbHost": "localhost",
+          "dbPort": "5432",
+          "dbName": "pulsarr",
+          "dbUser": "postgres",
+          "dbPassword": "pulsarrdb",
+          "CA_TS_FALLBACK_DIR": "/app/data"
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-pulsarr.py",
+          "blocks": [],
+          "env": {
+            "PLEX_TOKEN": {
+              "whenMediaServer": "plex",
+              "fromService": "plex",
+              "field": "plexToken"
+            },
+            "SONARR_URL": {
+              "whenService": "sonarr",
+              "value": "http://localhost:8989"
+            },
+            "SONARR_API_KEY": {
+              "whenService": "sonarr",
+              "fromServiceSecret": "sonarr",
+              "secret": "apiKey"
+            },
+            "RADARR_URL": {
+              "whenService": "radarr",
+              "value": "http://localhost:7878"
+            },
+            "RADARR_API_KEY": {
+              "whenService": "radarr",
+              "fromServiceSecret": "radarr",
+              "secret": "apiKey"
+            }
+          }
+        }
+      }
+    },
+    "radarr": {
+      "name": "Radarr",
+      "desc": "Movie manager",
+      "category": "media",
+      "repo": "https://github.com/Radarr/Radarr",
+      "compose": {
+        "image": "lscr.io/linuxserver/radarr:latest",
+        "ports": [
+          "7878:7878"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:7878/ping || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "90s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "configXml": {
+            "hostPath": "configRoot/<service>/config.xml",
+            "content": "<Config>\n  <ApiKey>${apiKey}</ApiKey>\n  <AuthenticationMethod>External</AuthenticationMethod>\n  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>\n  <UpdateMechanism>Docker</UpdateMechanism>\n  <LogLevel>info</LogLevel>\n</Config>\n"
+          }
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-radarr.py",
+          "blocks": [],
+          "env": {
+            "RADARR_API_KEY": {
+              "fromSecret": "apiKey"
+            },
+            "SABNZBD_URL": {
+              "whenService": "sabnzbd",
+              "value": "http://localhost:8080"
+            },
+            "SABNZBD_API_KEY": {
+              "whenService": "sabnzbd",
+              "fromServiceSecret": "sabnzbd",
+              "secret": "apiKey"
+            }
+          }
+        },
+        "mounts": [
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "mediaRoot/media/Intake",
+            "dst": "/media/Intake"
+          },
+          {
+            "src": "mediaRoot/media",
+            "dst": "/cache"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ]
+      }
+    },
+    "rdt-client": {
+      "name": "rdt-client",
+      "desc": "Real-Debrid torrent client",
+      "category": "downloads",
+      "repo": "https://github.com/rogerfar/rdt-client",
+      "compose": {
+        "image": "rogerfar/rdtclient:latest",
+        "ports": [
+          "6500:6500"
+        ],
+        "mounts": [
+          {
+            "src": "configRoot/<service>/db",
+            "dst": "/data/db"
+          },
+          {
+            "src": "mediaRoot/media/Intake/zurg/__all__",
+            "dst": "/data/downloads"
+          }
+        ]
+      }
+    },
+    "sabnzbd": {
+      "name": "SABnzbd",
+      "desc": "Usenet downloader",
+      "category": "downloads",
+      "repo": "https://github.com/sabnzbd/sabnzbd",
+      "compose": {
+        "image": "lscr.io/linuxserver/sabnzbd:latest",
+        "ports": [
+          "8080:8080"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8080/ || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "configIni": {
+            "hostPath": "configRoot/<service>/sabnzbd.ini",
+            "content": "[misc]\napi_key = ${apiKey}\nhost_whitelist = sabnzbd, localhost\ndisable_api_key = 0\nhost = 0.0.0.0\nport = 8080\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "mediaRoot/media/Intake/incomplete",
+            "dst": "/incomplete-downloads"
+          },
+          {
+            "src": "mediaRoot/media/Intake/downloads",
+            "dst": "/downloads"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ]
+      }
+    },
+    "seasonarr": {
+      "name": "Seasonarr",
+      "desc": "Season-pack management for Sonarr",
+      "category": "media",
+      "repo": "https://github.com/d3v1l1989/seasonarr",
+      "compose": {
+        "image": "ghcr.io/d3v1l1989/seasonarr:latest",
+        "networkMode": "bridge",
+        "ports": [
+          "8500:8000"
+        ],
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/app/data"
+          }
+        ],
+        "env": {
+          "DATABASE_URL": "sqlite:///./data/seasonarr.db",
+          "JWT_SECRET_KEY": {
+            "generate": "random",
+            "length": 64
+          }
+        }
+      }
+    },
+    "seerr": {
+      "name": "Seerr",
+      "desc": "Media requests (formerly Overseerr)",
+      "category": "requests",
+      "repo": "https://github.com/seerr-team/seerr",
+      "compose": {
+        "image": "ghcr.io/seerr-team/seerr:latest",
+        "ports": [
+          "5055:5055"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:5055/api/v1/status || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "settingsJson": {
+            "hostPath": "configRoot/<service>/settings.json",
+            "content": "{\n  \"apiKey\": \"${apiKey}\",\n  \"main\": {\n    \"apiKey\": \"${apiKey}\"\n  }\n}\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/app/config"
+          }
+        ],
+        "env": {
+          "LOG_LEVEL": "debug",
+          "CA_TS_FALLBACK_DIR": "/app/config"
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-seerr.py",
+          "blocks": [],
+          "env": {
+            "SEERR_API_KEY": {
+              "fromSecret": "apiKey"
+            },
+            "SONARR_URL": {
+              "whenService": "sonarr",
+              "value": "http://localhost:8989"
+            },
+            "SONARR_API_KEY": {
+              "whenService": "sonarr",
+              "fromServiceSecret": "sonarr",
+              "secret": "apiKey"
+            },
+            "RADARR_URL": {
+              "whenService": "radarr",
+              "value": "http://localhost:7878"
+            },
+            "RADARR_API_KEY": {
+              "whenService": "radarr",
+              "fromServiceSecret": "radarr",
+              "secret": "apiKey"
+            }
+          }
+        }
+      }
+    },
+    "sonarr": {
+      "name": "Sonarr",
+      "desc": "TV series manager",
+      "category": "media",
+      "repo": "https://github.com/Sonarr/Sonarr",
+      "compose": {
+        "image": "lscr.io/linuxserver/sonarr:latest",
+        "ports": [
+          "8989:8989"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8989/ping || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "90s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "configXml": {
+            "hostPath": "configRoot/<service>/config.xml",
+            "content": "<Config>\n  <ApiKey>${apiKey}</ApiKey>\n  <AuthenticationMethod>External</AuthenticationMethod>\n  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>\n  <UpdateMechanism>Docker</UpdateMechanism>\n  <LogLevel>info</LogLevel>\n</Config>\n"
+          }
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-sonarr.py",
+          "blocks": [],
+          "env": {
+            "SONARR_API_KEY": {
+              "fromSecret": "apiKey"
+            },
+            "SABNZBD_URL": {
+              "whenService": "sabnzbd",
+              "value": "http://localhost:8080"
+            },
+            "SABNZBD_API_KEY": {
+              "whenService": "sabnzbd",
+              "fromServiceSecret": "sabnzbd",
+              "secret": "apiKey"
+            }
+          }
+        },
+        "mounts": [
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "mediaRoot/media/Intake",
+            "dst": "/media/Intake"
+          },
+          {
+            "src": "mediaRoot/media",
+            "dst": "/cache"
+          },
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ]
+      }
+    },
+    "tautulli": {
+      "name": "Tautulli",
+      "desc": "Plex analytics",
+      "category": "monitoring",
+      "repo": "https://github.com/tautulli/tautulli",
+      "compose": {
+        "image": "lscr.io/linuxserver/tautulli:latest",
+        "ports": [
+          "8181:8181"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8181/ || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        },
+        "secrets": {
+          "apiKey": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "files": {
+          "configIni": {
+            "hostPath": "configRoot/<service>/config.ini",
+            "content": "[General]\napi_key = ${apiKey}\n"
+          }
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          }
+        ],
+        "postDeployScript": {
+          "path": "scripts/configure-tautulli.py",
+          "blocks": [],
+          "env": {
+            "TAUTULLI_API_KEY": {
+              "fromSecret": "apiKey"
+            },
+            "PLEX_URL": {
+              "whenMediaServer": "plex",
+              "value": "http://localhost:32400"
+            },
+            "PLEX_TOKEN": {
+              "whenMediaServer": "plex",
+              "fromService": "plex",
+              "field": "plexToken"
+            }
+          }
+        }
+      }
+    },
+    "zilean": {
+      "name": "Zilean",
+      "desc": "DMM scraper for debrid stacks",
+      "category": "debrid",
+      "repo": "https://github.com/iPromKnight/zilean",
+      "compose": {
+        "secrets": {
+          "postgresPassword": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "services": {
+          "postgres": {
+            "image": "postgres:17.2-alpine",
+            "networkMode": "bridge",
+            "shmSize": "2G",
+            "mounts": [
+              {
+                "src": "configRoot/<service>/postgres/pgdata",
+                "dst": "/var/lib/postgresql/data/pgdata"
+              }
+            ],
+            "env": {
+              "PGDATA": "/var/lib/postgresql/data/pgdata",
+              "POSTGRES_USER": "postgres",
+              "POSTGRES_PASSWORD": {
+                "fromSecret": "postgresPassword"
+              },
+              "POSTGRES_DB": "zilean"
+            },
+            "healthcheck": {
+              "test": [
+                "CMD-SHELL",
+                "pg_isready -U postgres -d zilean"
+              ],
+              "interval": "10s",
+              "timeout": "5s",
+              "retries": 10
+            }
+          },
+          "zilean": {
+            "image": "ipromknight/zilean:latest",
+            "networkMode": "bridge",
+            "tty": true,
+            "ports": [
+              "8192:8181"
+            ],
+            "mounts": [
+              {
+                "src": "configRoot/<service>/data",
+                "dst": "/app/data"
+              },
+              {
+                "src": "configRoot/<service>/tmp",
+                "dst": "/tmp"
+              }
+            ],
+            "env": {
+              "Zilean__Database__ConnectionString": "Host=zilean-postgres;Port=5432;Database=zilean;Username=postgres;Password=${postgresPassword}",
+              "Zilean__Dmm__SyncInterval": "00:30:00",
+              "Zilean__Scraper__MaxParallelRequests": 2,
+              "Zilean__Dmm__Enabled": "false"
+            },
+            "dependsOn": {
+              "postgres": {
+                "condition": "service_healthy"
+              }
+            },
+            "healthcheck": {
+              "test": [
+                "CMD-SHELL",
+                "wget -qO- http://localhost:8181/healthchecks/ping >/dev/null 2>&1"
+              ],
+              "interval": "30s",
+              "timeout": "10s",
+              "retries": 10
+            }
+          }
+        }
+      }
+    },
+    "zurg": {
+      "name": "zurg",
+      "desc": "Real-Debrid filesystem mount (rclone bundled)",
+      "category": "debrid",
+      "repo": "https://github.com/debridmediamanager/zurg-testing",
+      "compose": {
+        "files": {
+          "rcloneConf": {
+            "hostPath": "configRoot/<service>/rclone.conf",
+            "content": "[zurg]\ntype = webdav\nurl = http://zurg:9999/dav\nvendor = other\npacer_min_sleep = 0\n"
+          },
+          "configYml": {
+            "hostPath": "configRoot/<service>/config.yml",
+            "content": "zurg: v1\ntoken: ${rdApiToken}\n"
+          },
+          "plexUpdateSh": {
+            "hostPath": "configRoot/<service>/scripts/plex_update.sh",
+            "content": {
+              "fromUpstream": "https://raw.githubusercontent.com/debridmediamanager/zurg-testing/main/scripts/plex_update.sh",
+              "fallback": "#!/bin/bash\n\n# PLEX PARTIAL SCAN script or PLEX UPDATE script\n# When zurg detects changes, it can trigger this script IF your config.yml contains\n# on_library_update: sh plex_update.sh \"$@\"\n\n# docker compose exec zurg apk add libxml2-utils\n# sudo apt install libxml2-utils\n\nplex_url=\"http://<url>\" # If you're using zurg inside a Docker container, by default it is 172.17.0.1:32400\ntoken=\"<token>\" # open Plex in a browser, open dev console and copy-paste this: window.localStorage.getItem(\"myPlexAccessToken\")\nzurg_mount=\"/mnt/zurg\" # replace with your zurg mount path, ensure this is what Plex sees\n\n# Get the list of section IDs\nsection_ids=$(curl -sLX GET \"$plex_url/library/sections\" -H \"X-Plex-Token: $token\" | xmllint --xpath \"//Directory/@key\" - | grep -o 'key=\"[^\"]*\"' | awk -F'\"' '{print $2}')\n\nfor arg in \"$@\"\ndo\n    parsed_arg=\"${arg//\\\\}\"\n    echo $parsed_arg\n    modified_arg=\"$zurg_mount/$parsed_arg\"\n    echo \"Detected update on: $arg\"\n    echo \"Absolute path: $modified_arg\"\n\n    for section_id in $section_ids\n    do\n        echo \"Section ID: $section_id\"\n\n        curl -G -H \"X-Plex-Token: $token\" --data-urlencode \"path=$modified_arg\" $plex_url/library/sections/$section_id/refresh\n    done\ndone\n\necho \"All updated sections refreshed\"\n\n# credits to godver3, wasabipls"
+            },
+            "mode": 493
+          }
+        },
+        "services": {
+          "zurg": {
+            "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+            "networkMode": "bridge",
+            "ports": [
+              "9999:9999"
+            ],
+            "mounts": [
+              {
+                "src": "configRoot/<service>/scripts/plex_update.sh",
+                "dst": "/app/plex_update.sh"
+              },
+              {
+                "src": "configRoot/<service>/config.yml",
+                "dst": "/app/config.yml"
+              },
+              {
+                "src": "configRoot/<service>/data",
+                "dst": "/app/data"
+              },
+              {
+                "src": "mediaRoot/media",
+                "dst": "/media"
+              }
+            ]
+          },
+          "rclone": {
+            "image": "rclone/rclone:latest",
+            "networkMode": "bridge",
+            "capAdd": [
+              "SYS_ADMIN"
+            ],
+            "securityOpt": [
+              "apparmor:unconfined"
+            ],
+            "devices": [
+              "/dev/fuse:/dev/fuse:rwm"
+            ],
+            "command": "mount zurg: /data --allow-other --allow-non-empty --dir-cache-time 10s --vfs-cache-mode full --vfs-cache-max-size 50G --vfs-cache-max-age 1h --buffer-size 64M --vfs-read-ahead 256M",
+            "mounts": [
+              {
+                "src": "mediaRoot/media/Intake/zurg",
+                "dst": "/data",
+                "options": "rshared"
+              },
+              {
+                "src": "configRoot/<service>/rclone.conf",
+                "dst": "/config/rclone/rclone.conf"
+              },
+              {
+                "src": "mediaRoot/<service>/rclone-cache",
+                "dst": "/cache"
+              }
+            ],
+            "dependsOn": {
+              "zurg": {}
+            }
+          }
+        }
+      }
+    },
+    "newt": {
+      "name": "Pangolin (Newt)",
+      "desc": "Tunnel to Pangolin reverse proxy — no port forwarding",
+      "category": "networking",
+      "repo": "https://github.com/fosrl/newt",
+      "compose": {
+        "image": "fosrl/newt:latest",
+        "ports": [],
+        "mounts": [],
+        "capAdd": [
+          "NET_ADMIN",
+          "SYS_MODULE"
+        ],
+        "sysctls": {
+          "net.ipv4.conf.all.src_valid_mark": 1
+        },
+        "env": {
+          "PANGOLIN_ENDPOINT": {
+            "fromConfig": "pangolinEndpoint"
+          },
+          "NEWT_ID": {
+            "fromConfig": "newtId"
+          },
+          "NEWT_SECRET": {
+            "fromConfig": "newtSecret"
+          }
+        }
+      }
+    },
+    "gluetun": {
+      "name": "Gluetun",
+      "desc": "Per-container VPN routing (Mullvad/ProtonVPN/etc.)",
+      "category": "networking",
+      "repo": "https://github.com/qdm12/gluetun",
+      "compose": {
+        "image": "qmcgaw/gluetun:latest",
+        "ports": [],
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/gluetun"
+          }
+        ],
+        "capAdd": [
+          "NET_ADMIN"
+        ],
+        "devices": [
+          "/dev/net/tun:/dev/net/tun"
+        ],
+        "env": {
+          "VPN_SERVICE_PROVIDER": {
+            "fromConfig": "vpnProvider"
+          },
+          "VPN_TYPE": {
+            "fromConfig": "vpnType"
+          },
+          "WIREGUARD_PRIVATE_KEY": {
+            "fromConfig": "vpnWireguardPrivateKey",
+            "defaultValue": ""
+          },
+          "WIREGUARD_ADDRESSES": {
+            "fromConfig": "vpnWireguardAddresses",
+            "defaultValue": ""
+          },
+          "WIREGUARD_PRESHARED_KEY": {
+            "fromConfig": "vpnWireguardPresharedKey",
+            "defaultValue": ""
+          },
+          "OPENVPN_USER": {
+            "fromConfig": "vpnOpenvpnUser",
+            "defaultValue": ""
+          },
+          "OPENVPN_PASSWORD": {
+            "fromConfig": "vpnOpenvpnPassword",
+            "defaultValue": ""
+          },
+          "SERVER_COUNTRIES": {
+            "fromConfig": "vpnServerCountries",
+            "defaultValue": ""
+          },
+          "SERVER_CITIES": {
+            "fromConfig": "vpnServerCities",
+            "defaultValue": ""
+          }
+        },
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "wget",
+            "-qO-",
+            "http://localhost:9999/v1/openvpn/status"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "60s"
+        }
+      }
+    }
+  },
+  "mediaServerMeta": {
+    "jellyfin": {
+      "name": "Jellyfin",
+      "desc": "Free and open-source media server",
+      "repo": "https://github.com/jellyfin/jellyfin",
+      "compose": {
+        "image": "lscr.io/linuxserver/jellyfin:latest",
+        "networkMode": "host",
+        "ports": [
+          "8096:8096"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8096/System/Ping || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "120s"
+        },
+        "secrets": {
+          "adminPassword": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "env": {
+          "JELLYFIN_PublishedServerUrl": {
+            "fromConfig": "jellyfinSettings.JELLYFIN_PublishedServerUrl",
+            "defaultValue": ""
+          }
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          },
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "mediaRoot/<service>/transcodes",
+            "dst": "/transcodes"
+          }
+        ],
+        "fetchScript": {
+          "path": "scripts/fetch-jellyfin-secrets.py",
+          "env": {
+            "JELLYFIN_PASSWORD": {
+              "fromSecret": "adminPassword"
+            }
+          }
+        }
+      }
+    },
+    "plex": {
+      "name": "Plex",
+      "desc": "Premium media streaming platform",
+      "repo": "https://github.com/plexinc/pms-docker",
+      "compose": {
+        "image": "plexinc/pms-docker:latest",
+        "networkMode": "host",
+        "ports": [
+          "32400:32400"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:32400/identity || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "180s"
+        },
+        "env": {
+          "PLEX_CLAIM": {
+            "fromConfig": "plexSettings.PLEX_CLAIM",
+            "defaultValue": ""
+          },
+          "PLEX_UID": "99",
+          "PLEX_GID": "100",
+          "ADVERTISE_IP": {
+            "fromConfig": "plexSettings.ADVERTISE_IP",
+            "defaultValue": ""
+          }
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          },
+          {
+            "src": "mediaRoot/<service>/transcode",
+            "dst": "/transcode"
+          },
+          {
+            "src": "mediaRoot/media",
+            "dst": "/data"
+          }
+        ],
+        "fetchScript": {
+          "path": "scripts/fetch-plex-secrets.py"
+        },
+        "postDeployScript": {
+          "path": "scripts/configure-plex.py",
+          "blocks": [],
+          "env": {
+            "PLEX_TOKEN": {
+              "fromService": "plex",
+              "field": "plexToken"
+            },
+            "CINESYNC_ENABLED": {
+              "whenService": "cinesync",
+              "value": "1"
+            },
+            "CINESYNC_OUTPUT_PATH": {
+              "whenService": "cinesync",
+              "value": "/data/output/CineSync"
+            },
+            "CINESYNC_ANIME_LIBRARIES_ENABLED": {
+              "whenService": "cinesync",
+              "fromConfig": "cinesyncSettings.animeSeparation",
+              "defaultValue": "false"
+            },
+            "CINESYNC_4K_LIBRARIES_ENABLED": {
+              "whenService": "cinesync",
+              "fromConfig": "cinesyncSettings.fourKSeparation",
+              "defaultValue": "false"
+            }
+          }
+        }
+      }
+    },
+    "emby": {
+      "name": "Emby",
+      "desc": "Feature-rich media server with live TV support",
+      "repo": "https://github.com/MediaBrowser/Emby",
+      "compose": {
+        "image": "emby/embyserver:latest",
+        "networkMode": "host",
+        "ports": [
+          "8096:8096"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "wget --spider -q -T 5 -t 1 http://localhost:8096/emby/System/Ping || exit 1"
+          ],
+          "interval": "30s",
+          "timeout": "10s",
+          "retries": 5,
+          "start_period": "120s"
+        },
+        "secrets": {
+          "adminPassword": {
+            "generate": "random",
+            "length": 32
+          }
+        },
+        "env": {
+          "EMBY_PublishedServerUrl": {
+            "fromConfig": "embySettings.EMBY_PublishedServerUrl",
+            "defaultValue": ""
+          },
+          "UID": "99",
+          "GID": "100"
+        },
+        "mounts": [
+          {
+            "src": "configRoot/<service>",
+            "dst": "/config"
+          },
+          {
+            "src": "mediaRoot/media",
+            "dst": "/media"
+          },
+          {
+            "src": "mediaRoot/<service>/transcoding-temp",
+            "dst": "/transcoding-temp"
+          }
+        ],
+        "fetchScript": {
+          "path": "scripts/fetch-emby-secrets.py",
+          "env": {
+            "EMBY_PASSWORD": {
+              "fromSecret": "adminPassword"
+            }
+          }
+        }
+      }
+    }
+  }
+}

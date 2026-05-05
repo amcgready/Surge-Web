@@ -1,0 +1,1828 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`preview: arrStackUnraidCache matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [
+    Object {
+      "env": Object {},
+      "path": "scripts/fetch-plex-secrets.py",
+      "service": "plex",
+    },
+  ],
+  "files": Array [
+    Object {
+      "content": "[general]
+apikey = <GENERATED:bazarr.apiKey>
+",
+      "path": "/mnt/user/appdata/bazarr/config/config.ini",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:prowlarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/prowlarr/config.xml",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:radarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/radarr/config.xml",
+    },
+    Object {
+      "content": "[misc]
+api_key = <GENERATED:sabnzbd.apiKey>
+host_whitelist = sabnzbd, localhost
+disable_api_key = 0
+host = 0.0.0.0
+port = 8080
+",
+      "path": "/mnt/user/appdata/sabnzbd/sabnzbd.ini",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:sonarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/sonarr/config.xml",
+    },
+  ],
+  "networks": Object {},
+  "postDeployScripts": Array [
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "BAZARR_API_KEY": "<GENERATED:bazarr.apiKey>",
+        "PLEX_TOKEN": "<RUNTIME-FETCH:plex.plexToken>",
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+      },
+      "path": "scripts/configure-bazarr.py",
+      "service": "bazarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "PLEX_TOKEN": "<RUNTIME-FETCH:plex.plexToken>",
+      },
+      "path": "scripts/configure-plex.py",
+      "service": "plex",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "INDEXERS_DEST": "configRoot/Prowlarr-Indexers",
+        "PROWLARR_API_KEY": "<GENERATED:prowlarr.apiKey>",
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+        "RADARR_URL": "http://localhost:7878",
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+        "SONARR_URL": "http://localhost:8989",
+      },
+      "path": "scripts/configure-prowlarr.py",
+      "service": "prowlarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+        "SABNZBD_API_KEY": "<GENERATED:sabnzbd.apiKey>",
+        "SABNZBD_URL": "http://localhost:8080",
+      },
+      "path": "scripts/configure-radarr.py",
+      "service": "radarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "SABNZBD_API_KEY": "<GENERATED:sabnzbd.apiKey>",
+        "SABNZBD_URL": "http://localhost:8080",
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+      },
+      "path": "scripts/configure-sonarr.py",
+      "service": "sonarr",
+    },
+  ],
+  "secrets": Object {
+    "bazarr.apiKey": "<GENERATED:bazarr.apiKey>",
+    "prowlarr.apiKey": "<GENERATED:prowlarr.apiKey>",
+    "radarr.apiKey": "<GENERATED:radarr.apiKey>",
+    "sabnzbd.apiKey": "<GENERATED:sabnzbd.apiKey>",
+    "sonarr.apiKey": "<GENERATED:sonarr.apiKey>",
+  },
+  "services": Object {
+    "bazarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "60s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:6767/ || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "linuxserver/bazarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "6767:6767",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/bazarr",
+        },
+      ],
+    },
+    "plex": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "PLEX_CLAIM=claim-1234567890abcdef",
+        "PLEX_UID=99",
+        "PLEX_GID=100",
+        "ADVERTISE_IP=",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "180s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:32400/identity || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "plexinc/pms-docker:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "32400:32400",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/plex",
+        },
+        Object {
+          "container": "/transcode",
+          "host": "/mnt/cache/plex/transcode",
+        },
+        Object {
+          "container": "/data",
+          "host": "/mnt/cache/media",
+        },
+      ],
+    },
+    "prowlarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:9696/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/prowlarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "9696:9696",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config/Definitions/Custom",
+          "host": "/mnt/user/appdata/Prowlarr-Indexers/Custom",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/prowlarr",
+        },
+      ],
+    },
+    "radarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:7878/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/radarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "7878:7878",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/mnt/cache/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/radarr",
+        },
+      ],
+    },
+    "sabnzbd": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "60s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8080/ || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/sabnzbd:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8080:8080",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/incomplete-downloads",
+          "host": "/mnt/cache/media/Intake/incomplete",
+        },
+        Object {
+          "container": "/downloads",
+          "host": "/mnt/cache/media/Intake/downloads",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/sabnzbd",
+        },
+      ],
+    },
+    "sonarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8989/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/sonarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8989:8989",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/mnt/cache/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/sonarr",
+        },
+      ],
+    },
+  },
+  "warnings": Array [],
+}
+`;
+
+exports[`preview: debridStackDocker matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [
+    Object {
+      "env": Object {
+        "JELLYFIN_PASSWORD": "<GENERATED:jellyfin.adminPassword>",
+      },
+      "path": "scripts/fetch-jellyfin-secrets.py",
+      "service": "jellyfin",
+    },
+  ],
+  "files": Array [
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:prowlarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/srv/surge/prowlarr/config.xml",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:radarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/srv/surge/radarr/config.xml",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:sonarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/srv/surge/sonarr/config.xml",
+    },
+    Object {
+      "content": "zurg: v1
+token: test-rd-token
+",
+      "path": "/srv/surge/zurg/config.yml",
+    },
+    Object {
+      "content": "[zurg]
+type = webdav
+url = http://zurg:9999/dav
+vendor = other
+pacer_min_sleep = 0
+",
+      "path": "/srv/surge/zurg/rclone.conf",
+    },
+    Object {
+      "content": "<UPSTREAM-FETCH-OR-FALLBACK:https://raw.githubusercontent.com/debridmediamanager/zurg-testing/main/scripts/plex_update.sh>",
+      "mode": 493,
+      "path": "/srv/surge/zurg/scripts/plex_update.sh",
+    },
+  ],
+  "networks": Object {
+    "zilean-internal": Object {
+      "driver": "bridge",
+    },
+    "zurg-internal": Object {
+      "driver": "bridge",
+    },
+  },
+  "postDeployScripts": Array [
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "INDEXERS_DEST": "configRoot/Prowlarr-Indexers",
+        "PROWLARR_API_KEY": "<GENERATED:prowlarr.apiKey>",
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+        "RADARR_URL": "http://localhost:7878",
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+        "SONARR_URL": "http://localhost:8989",
+        "ZILEAN_URL": "http://localhost:8181",
+      },
+      "path": "scripts/configure-prowlarr.py",
+      "service": "prowlarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+      },
+      "path": "scripts/configure-radarr.py",
+      "service": "radarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+      },
+      "path": "scripts/configure-sonarr.py",
+      "service": "sonarr",
+    },
+  ],
+  "secrets": Object {
+    "jellyfin.adminPassword": "<GENERATED:jellyfin.adminPassword>",
+    "prowlarr.apiKey": "<GENERATED:prowlarr.apiKey>",
+    "radarr.apiKey": "<GENERATED:radarr.apiKey>",
+    "sonarr.apiKey": "<GENERATED:sonarr.apiKey>",
+    "zilean.postgresPassword": "<GENERATED:zilean.postgresPassword>",
+  },
+  "services": Object {
+    "jellyfin": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "JELLYFIN_PublishedServerUrl=https://jellyfin.example.com",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "120s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8096/System/Ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/jellyfin:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8096:8096",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/srv/surge/jellyfin",
+        },
+        Object {
+          "container": "/media",
+          "host": "/srv/surge/media",
+        },
+        Object {
+          "container": "/transcodes",
+          "host": "/srv/surge/jellyfin/transcodes",
+        },
+      ],
+    },
+    "prowlarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:9696/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/prowlarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "9696:9696",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/srv/surge/media",
+        },
+        Object {
+          "container": "/config/Definitions/Custom",
+          "host": "/srv/surge/Prowlarr-Indexers/Custom",
+        },
+        Object {
+          "container": "/config",
+          "host": "/srv/surge/prowlarr",
+        },
+      ],
+    },
+    "radarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:7878/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/radarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "7878:7878",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/srv/surge/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/srv/surge/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/srv/surge/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/srv/surge/radarr",
+        },
+      ],
+    },
+    "rdt-client": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "image": "rogerfar/rdtclient:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "6500:6500",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/data/db",
+          "host": "/srv/surge/rdt-client/db",
+        },
+        Object {
+          "container": "/data/downloads",
+          "host": "/srv/surge/media/Intake/zurg/__all__",
+        },
+      ],
+    },
+    "sonarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8989/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/sonarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8989:8989",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/srv/surge/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/srv/surge/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/srv/surge/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/srv/surge/sonarr",
+        },
+      ],
+    },
+    "zilean": Object {
+      "dependsOn": Object {
+        "zilean-postgres": Object {
+          "condition": "service_healthy",
+        },
+      },
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "Zilean__Database__ConnectionString=Host=zilean-postgres;Port=5432;Database=zilean;Username=postgres;Password=<GENERATED:zilean.postgresPassword>",
+        "Zilean__Dmm__SyncInterval=00:30:00",
+        "Zilean__Scraper__MaxParallelRequests=2",
+        "Zilean__Dmm__Enabled=false",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 10,
+        "test": Array [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8181/healthchecks/ping >/dev/null 2>&1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "ipromknight/zilean:latest",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zilean-internal",
+      ],
+      "ports": Array [
+        "8192:8181",
+      ],
+      "restart": "unless-stopped",
+      "tty": true,
+      "volumes": Array [
+        Object {
+          "container": "/app/data",
+          "host": "/srv/surge/zilean/data",
+        },
+        Object {
+          "container": "/tmp",
+          "host": "/srv/surge/zilean/tmp",
+        },
+      ],
+    },
+    "zilean-postgres": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "PGDATA=/var/lib/postgresql/data/pgdata",
+        "POSTGRES_USER=postgres",
+        "POSTGRES_PASSWORD=<GENERATED:zilean.postgresPassword>",
+        "POSTGRES_DB=zilean",
+      ],
+      "healthcheck": Object {
+        "interval": "10s",
+        "retries": 10,
+        "test": Array [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d zilean",
+        ],
+        "timeout": "5s",
+      },
+      "image": "postgres:17.2-alpine",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zilean-internal",
+      ],
+      "restart": "unless-stopped",
+      "shmSize": "2G",
+      "volumes": Array [
+        Object {
+          "container": "/var/lib/postgresql/data/pgdata",
+          "host": "/srv/surge/zilean/postgres/pgdata",
+        },
+      ],
+    },
+    "zurg": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zurg-internal",
+      ],
+      "ports": Array [
+        "9999:9999",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/app/plex_update.sh",
+          "host": "/srv/surge/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "container": "/app/config.yml",
+          "host": "/srv/surge/zurg/config.yml",
+        },
+        Object {
+          "container": "/app/data",
+          "host": "/srv/surge/zurg/data",
+        },
+        Object {
+          "container": "/media",
+          "host": "/srv/surge/media",
+        },
+      ],
+    },
+    "zurg-rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "command": "mount zurg: /data --allow-other --allow-non-empty --dir-cache-time 10s --vfs-cache-mode full --vfs-cache-max-size 50G --vfs-cache-max-age 1h --buffer-size 64M --vfs-read-ahead 256M",
+      "dependsOn": Object {
+        "zurg": Object {},
+      },
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "image": "rclone/rclone:latest",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zurg-internal",
+      ],
+      "restart": "unless-stopped",
+      "securityOpt": Array [
+        "apparmor:unconfined",
+      ],
+      "volumes": Array [
+        Object {
+          "container": "/data",
+          "host": "/srv/surge/media/Intake/zurg",
+          "options": "rshared",
+        },
+        Object {
+          "container": "/config/rclone/rclone.conf",
+          "host": "/srv/surge/zurg/rclone.conf",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/srv/surge/zurg/rclone-cache",
+        },
+      ],
+    },
+  },
+  "warnings": Array [
+    "zurg: file content fetched from https://raw.githubusercontent.com/debridmediamanager/zurg-testing/main/scripts/plex_update.sh",
+  ],
+}
+`;
+
+exports[`preview: debridStackUnraidCache matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [
+    Object {
+      "env": Object {
+        "JELLYFIN_PASSWORD": "<GENERATED:jellyfin.adminPassword>",
+      },
+      "path": "scripts/fetch-jellyfin-secrets.py",
+      "service": "jellyfin",
+    },
+  ],
+  "files": Array [
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:prowlarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/prowlarr/config.xml",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:radarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/radarr/config.xml",
+    },
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:sonarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/sonarr/config.xml",
+    },
+    Object {
+      "content": "zurg: v1
+token: test-rd-token
+",
+      "path": "/mnt/user/appdata/zurg/config.yml",
+    },
+    Object {
+      "content": "[zurg]
+type = webdav
+url = http://zurg:9999/dav
+vendor = other
+pacer_min_sleep = 0
+",
+      "path": "/mnt/user/appdata/zurg/rclone.conf",
+    },
+    Object {
+      "content": "<UPSTREAM-FETCH-OR-FALLBACK:https://raw.githubusercontent.com/debridmediamanager/zurg-testing/main/scripts/plex_update.sh>",
+      "mode": 493,
+      "path": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+    },
+  ],
+  "networks": Object {
+    "zilean-internal": Object {
+      "driver": "bridge",
+    },
+    "zurg-internal": Object {
+      "driver": "bridge",
+    },
+  },
+  "postDeployScripts": Array [
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "INDEXERS_DEST": "configRoot/Prowlarr-Indexers",
+        "PROWLARR_API_KEY": "<GENERATED:prowlarr.apiKey>",
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+        "RADARR_URL": "http://localhost:7878",
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+        "SONARR_URL": "http://localhost:8989",
+        "ZILEAN_URL": "http://localhost:8181",
+      },
+      "path": "scripts/configure-prowlarr.py",
+      "service": "prowlarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "RADARR_API_KEY": "<GENERATED:radarr.apiKey>",
+      },
+      "path": "scripts/configure-radarr.py",
+      "service": "radarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+      },
+      "path": "scripts/configure-sonarr.py",
+      "service": "sonarr",
+    },
+  ],
+  "secrets": Object {
+    "jellyfin.adminPassword": "<GENERATED:jellyfin.adminPassword>",
+    "prowlarr.apiKey": "<GENERATED:prowlarr.apiKey>",
+    "radarr.apiKey": "<GENERATED:radarr.apiKey>",
+    "sonarr.apiKey": "<GENERATED:sonarr.apiKey>",
+    "zilean.postgresPassword": "<GENERATED:zilean.postgresPassword>",
+  },
+  "services": Object {
+    "jellyfin": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "JELLYFIN_PublishedServerUrl=https://jellyfin.example.com",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "120s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8096/System/Ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/jellyfin:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8096:8096",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/jellyfin",
+        },
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/transcodes",
+          "host": "/mnt/cache/jellyfin/transcodes",
+        },
+      ],
+    },
+    "prowlarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:9696/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/prowlarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "9696:9696",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config/Definitions/Custom",
+          "host": "/mnt/user/appdata/Prowlarr-Indexers/Custom",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/prowlarr",
+        },
+      ],
+    },
+    "radarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:7878/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/radarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "7878:7878",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/mnt/cache/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/radarr",
+        },
+      ],
+    },
+    "rdt-client": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "image": "rogerfar/rdtclient:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "6500:6500",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/data/db",
+          "host": "/mnt/user/appdata/rdt-client/db",
+        },
+        Object {
+          "container": "/data/downloads",
+          "host": "/mnt/cache/media/Intake/zurg/__all__",
+        },
+      ],
+    },
+    "sonarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8989/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/sonarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8989:8989",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/mnt/cache/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/sonarr",
+        },
+      ],
+    },
+    "zilean": Object {
+      "dependsOn": Object {
+        "zilean-postgres": Object {
+          "condition": "service_healthy",
+        },
+      },
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "Zilean__Database__ConnectionString=Host=zilean-postgres;Port=5432;Database=zilean;Username=postgres;Password=<GENERATED:zilean.postgresPassword>",
+        "Zilean__Dmm__SyncInterval=00:30:00",
+        "Zilean__Scraper__MaxParallelRequests=2",
+        "Zilean__Dmm__Enabled=false",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 10,
+        "test": Array [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8181/healthchecks/ping >/dev/null 2>&1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "ipromknight/zilean:latest",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zilean-internal",
+      ],
+      "ports": Array [
+        "8192:8181",
+      ],
+      "restart": "unless-stopped",
+      "tty": true,
+      "volumes": Array [
+        Object {
+          "container": "/app/data",
+          "host": "/mnt/user/appdata/zilean/data",
+        },
+        Object {
+          "container": "/tmp",
+          "host": "/mnt/user/appdata/zilean/tmp",
+        },
+      ],
+    },
+    "zilean-postgres": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "PGDATA=/var/lib/postgresql/data/pgdata",
+        "POSTGRES_USER=postgres",
+        "POSTGRES_PASSWORD=<GENERATED:zilean.postgresPassword>",
+        "POSTGRES_DB=zilean",
+      ],
+      "healthcheck": Object {
+        "interval": "10s",
+        "retries": 10,
+        "test": Array [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d zilean",
+        ],
+        "timeout": "5s",
+      },
+      "image": "postgres:17.2-alpine",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zilean-internal",
+      ],
+      "restart": "unless-stopped",
+      "shmSize": "2G",
+      "volumes": Array [
+        Object {
+          "container": "/var/lib/postgresql/data/pgdata",
+          "host": "/mnt/user/appdata/zilean/postgres/pgdata",
+        },
+      ],
+    },
+    "zurg": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zurg-internal",
+      ],
+      "ports": Array [
+        "9999:9999",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/app/plex_update.sh",
+          "host": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "container": "/app/config.yml",
+          "host": "/mnt/user/appdata/zurg/config.yml",
+        },
+        Object {
+          "container": "/app/data",
+          "host": "/mnt/user/appdata/zurg/data",
+        },
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+      ],
+    },
+    "zurg-rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "command": "mount zurg: /data --allow-other --allow-non-empty --dir-cache-time 10s --vfs-cache-mode full --vfs-cache-max-size 50G --vfs-cache-max-age 1h --buffer-size 64M --vfs-read-ahead 256M",
+      "dependsOn": Object {
+        "zurg": Object {},
+      },
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "image": "rclone/rclone:latest",
+      "networkMode": "bridge",
+      "networks": Array [
+        "zurg-internal",
+      ],
+      "restart": "unless-stopped",
+      "securityOpt": Array [
+        "apparmor:unconfined",
+      ],
+      "volumes": Array [
+        Object {
+          "container": "/data",
+          "host": "/mnt/cache/media/Intake/zurg",
+          "options": "rshared",
+        },
+        Object {
+          "container": "/config/rclone/rclone.conf",
+          "host": "/mnt/user/appdata/zurg/rclone.conf",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/zurg/rclone-cache",
+        },
+      ],
+    },
+  },
+  "warnings": Array [
+    "zurg: file content fetched from https://raw.githubusercontent.com/debridmediamanager/zurg-testing/main/scripts/plex_update.sh",
+  ],
+}
+`;
+
+exports[`preview: emptyConfig matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [],
+  "files": Array [],
+  "networks": Object {},
+  "postDeployScripts": Array [],
+  "secrets": Object {},
+  "services": Object {},
+  "warnings": Array [],
+}
+`;
+
+exports[`preview: episeerrCrossServiceFlavors matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [
+    Object {
+      "env": Object {
+        "JELLYFIN_PASSWORD": "<GENERATED:jellyfin.adminPassword>",
+      },
+      "path": "scripts/fetch-jellyfin-secrets.py",
+      "service": "jellyfin",
+    },
+  ],
+  "files": Array [
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:sonarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/sonarr/config.xml",
+    },
+    Object {
+      "content": "[General]
+api_key = <GENERATED:tautulli.apiKey>
+",
+      "path": "/mnt/user/appdata/tautulli/config.ini",
+    },
+  ],
+  "networks": Object {},
+  "postDeployScripts": Array [
+    Object {
+      "blocks": Array [],
+      "env": Object {},
+      "path": "scripts/configure-episeerr.py",
+      "service": "episeerr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+      },
+      "path": "scripts/configure-sonarr.py",
+      "service": "sonarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "TAUTULLI_API_KEY": "<GENERATED:tautulli.apiKey>",
+      },
+      "path": "scripts/configure-tautulli.py",
+      "service": "tautulli",
+    },
+  ],
+  "secrets": Object {
+    "jellyfin.adminPassword": "<GENERATED:jellyfin.adminPassword>",
+    "sonarr.apiKey": "<GENERATED:sonarr.apiKey>",
+    "tautulli.apiKey": "<GENERATED:tautulli.apiKey>",
+  },
+  "services": Object {
+    "episeerr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "TMDB_API_KEY=test-tmdb-from-config",
+        "SONARR_URL=http://localhost:8989",
+        "SONARR_API_KEY=<GENERATED:sonarr.apiKey>",
+        "TAUTULLI_URL=http://localhost:8181",
+        "TAUTULLI_API_KEY=<GENERATED:tautulli.apiKey>",
+        "JELLYFIN_URL=http://localhost:8096",
+        "JELLYFIN_API_KEY=<RUNTIME-FETCH:jellyfin.apiKey>",
+        "JELLYFIN_USER_ID=<RUNTIME-FETCH:jellyfin.userId>",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "60s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:5002/ || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "vansmak/episeerr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "5002:5002",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/app/config",
+          "host": "/mnt/user/appdata/episeerr",
+        },
+        Object {
+          "container": "/app/logs",
+          "host": "/mnt/user/appdata/episeerr/logs",
+        },
+        Object {
+          "container": "/app/data",
+          "host": "/mnt/user/appdata/episeerr/data",
+        },
+        Object {
+          "container": "/app/temp",
+          "host": "/mnt/user/appdata/episeerr/temp",
+        },
+      ],
+    },
+    "jellyfin": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "JELLYFIN_PublishedServerUrl=https://jellyfin.example.com",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "120s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8096/System/Ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/jellyfin:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8096:8096",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/jellyfin",
+        },
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/transcodes",
+          "host": "/mnt/cache/jellyfin/transcodes",
+        },
+      ],
+    },
+    "sonarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8989/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/sonarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8989:8989",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/mnt/cache/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/sonarr",
+        },
+      ],
+    },
+    "tautulli": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "60s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8181/ || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/tautulli:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8181:8181",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/tautulli",
+        },
+      ],
+    },
+  },
+  "warnings": Array [],
+}
+`;
+
+exports[`preview: episeerrWithPlex matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [
+    Object {
+      "env": Object {},
+      "path": "scripts/fetch-plex-secrets.py",
+      "service": "plex",
+    },
+  ],
+  "files": Array [
+    Object {
+      "content": "<Config>
+  <ApiKey><GENERATED:sonarr.apiKey></ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <LogLevel>info</LogLevel>
+</Config>
+",
+      "path": "/mnt/user/appdata/sonarr/config.xml",
+    },
+    Object {
+      "content": "[General]
+api_key = <GENERATED:tautulli.apiKey>
+",
+      "path": "/mnt/user/appdata/tautulli/config.ini",
+    },
+  ],
+  "networks": Object {},
+  "postDeployScripts": Array [
+    Object {
+      "blocks": Array [],
+      "env": Object {},
+      "path": "scripts/configure-episeerr.py",
+      "service": "episeerr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "PLEX_TOKEN": "<RUNTIME-FETCH:plex.plexToken>",
+      },
+      "path": "scripts/configure-plex.py",
+      "service": "plex",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "SONARR_API_KEY": "<GENERATED:sonarr.apiKey>",
+      },
+      "path": "scripts/configure-sonarr.py",
+      "service": "sonarr",
+    },
+    Object {
+      "blocks": Array [],
+      "env": Object {
+        "PLEX_TOKEN": "<RUNTIME-FETCH:plex.plexToken>",
+        "PLEX_URL": "http://localhost:32400",
+        "TAUTULLI_API_KEY": "<GENERATED:tautulli.apiKey>",
+      },
+      "path": "scripts/configure-tautulli.py",
+      "service": "tautulli",
+    },
+  ],
+  "secrets": Object {
+    "sonarr.apiKey": "<GENERATED:sonarr.apiKey>",
+    "tautulli.apiKey": "<GENERATED:tautulli.apiKey>",
+  },
+  "services": Object {
+    "episeerr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "TMDB_API_KEY=test-tmdb-from-config",
+        "SONARR_URL=http://localhost:8989",
+        "SONARR_API_KEY=<GENERATED:sonarr.apiKey>",
+        "TAUTULLI_URL=http://localhost:8181",
+        "TAUTULLI_API_KEY=<GENERATED:tautulli.apiKey>",
+        "PLEX_URL=http://localhost:32400",
+        "PLEX_TOKEN=<RUNTIME-FETCH:plex.plexToken>",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "60s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:5002/ || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "vansmak/episeerr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "5002:5002",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/app/config",
+          "host": "/mnt/user/appdata/episeerr",
+        },
+        Object {
+          "container": "/app/logs",
+          "host": "/mnt/user/appdata/episeerr/logs",
+        },
+        Object {
+          "container": "/app/data",
+          "host": "/mnt/user/appdata/episeerr/data",
+        },
+        Object {
+          "container": "/app/temp",
+          "host": "/mnt/user/appdata/episeerr/temp",
+        },
+      ],
+    },
+    "plex": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "PLEX_CLAIM=claim-test",
+        "PLEX_UID=99",
+        "PLEX_GID=100",
+        "ADVERTISE_IP=",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "180s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:32400/identity || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "plexinc/pms-docker:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "32400:32400",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/plex",
+        },
+        Object {
+          "container": "/transcode",
+          "host": "/mnt/cache/plex/transcode",
+        },
+        Object {
+          "container": "/data",
+          "host": "/mnt/cache/media",
+        },
+      ],
+    },
+    "sonarr": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "90s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8989/ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/sonarr:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8989:8989",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/media/Intake",
+          "host": "/mnt/cache/media/Intake",
+        },
+        Object {
+          "container": "/cache",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/sonarr",
+        },
+      ],
+    },
+    "tautulli": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "60s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8181/ || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/tautulli:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8181:8181",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/tautulli",
+        },
+      ],
+    },
+  },
+  "warnings": Array [],
+}
+`;
+
+exports[`preview: jellyfinOnly matches snapshot 1`] = `
+Object {
+  "fetchScripts": Array [
+    Object {
+      "env": Object {
+        "JELLYFIN_PASSWORD": "<GENERATED:jellyfin.adminPassword>",
+      },
+      "path": "scripts/fetch-jellyfin-secrets.py",
+      "service": "jellyfin",
+    },
+  ],
+  "files": Array [],
+  "networks": Object {},
+  "postDeployScripts": Array [],
+  "secrets": Object {
+    "jellyfin.adminPassword": "<GENERATED:jellyfin.adminPassword>",
+  },
+  "services": Object {
+    "jellyfin": Object {
+      "environment": Array [
+        "PUID=99",
+        "PGID=100",
+        "UMASK=022",
+        "TZ=\${TZ:-UTC}",
+        "JELLYFIN_PublishedServerUrl=https://jellyfin.example.com",
+      ],
+      "healthcheck": Object {
+        "interval": "30s",
+        "retries": 5,
+        "start_period": "120s",
+        "test": Array [
+          "CMD-SHELL",
+          "wget --spider -q -T 5 -t 1 http://localhost:8096/System/Ping || exit 1",
+        ],
+        "timeout": "10s",
+      },
+      "image": "lscr.io/linuxserver/jellyfin:latest",
+      "networkMode": "host",
+      "ports": Array [
+        "8096:8096",
+      ],
+      "restart": "unless-stopped",
+      "volumes": Array [
+        Object {
+          "container": "/config",
+          "host": "/mnt/user/appdata/jellyfin",
+        },
+        Object {
+          "container": "/media",
+          "host": "/mnt/cache/media",
+        },
+        Object {
+          "container": "/transcodes",
+          "host": "/mnt/cache/jellyfin/transcodes",
+        },
+      ],
+    },
+  },
+  "warnings": Array [],
+}
+`;

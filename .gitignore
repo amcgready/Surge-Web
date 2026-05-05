@@ -333,3 +333,6 @@ flask_output.log
 # Local development
 local_config.py
 config_local.py
+
+# Surge: scripts/orchestrator copied here by frontend's prebuild hook
+frontend/public/deploy_assets/

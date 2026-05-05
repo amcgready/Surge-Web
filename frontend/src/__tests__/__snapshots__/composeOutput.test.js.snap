@@ -1,0 +1,1631 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`scenario: docker-custom-root mediaServerMeta emby — Emby-flavored fetchScript + adminPassword secret 1`] = `
+Object {
+  "image": "emby/embyserver:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/srv/media-stack/emby",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/srv/media-stack/media",
+    },
+    Object {
+      "dst": "/transcoding-temp",
+      "src": "/srv/media-stack/emby/transcoding-temp",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: docker-custom-root mediaServerMeta jellyfin — fetchScript + transcodes on cache 1`] = `
+Object {
+  "image": "lscr.io/linuxserver/jellyfin:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/srv/media-stack/jellyfin",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/srv/media-stack/media",
+    },
+    Object {
+      "dst": "/transcodes",
+      "src": "/srv/media-stack/jellyfin/transcodes",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: docker-custom-root mediaServerMeta plex — host networking + library auto-creation paths 1`] = `
+Object {
+  "image": "plexinc/pms-docker:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/srv/media-stack/plex",
+    },
+    Object {
+      "dst": "/transcode",
+      "src": "/srv/media-stack/plex/transcode",
+    },
+    Object {
+      "dst": "/data",
+      "src": "/srv/media-stack/media",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "32400:32400",
+  ],
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — multi-container patterns nzbdav — postDeployScript-gated rclone sibling 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "nzbdav": Object {
+      "image": "nzbdav/nzbdav:alpha",
+      "mounts": Array [
+        Object {
+          "dst": "/config",
+          "src": "/srv/media-stack/nzbdav",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "3000:3000",
+      ],
+    },
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/nzbdav",
+          "options": "rshared",
+          "src": "/srv/media-stack/media/Intake/nzbdav",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/srv/media-stack/nzbdav/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/srv/media-stack/nzbdav/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+  },
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — multi-container patterns zilean — postgres sibling + bridge net + secrets 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "postgres": Object {
+      "image": "postgres:17.2-alpine",
+      "mounts": Array [
+        Object {
+          "dst": "/var/lib/postgresql/data/pgdata",
+          "src": "/srv/media-stack/zilean/postgres/pgdata",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zilean": Object {
+      "image": "ipromknight/zilean:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/data",
+          "src": "/srv/media-stack/zilean/data",
+        },
+        Object {
+          "dst": "/tmp",
+          "src": "/srv/media-stack/zilean/tmp",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "8192:8181",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — multi-container patterns zurg — rclone sibling + FUSE caps + compose.files 1`] = `
+Object {
+  "files": Object {
+    "configYml": Object {
+      "hostPath": "/srv/media-stack/zurg/config.yml",
+    },
+    "plexUpdateSh": Object {
+      "hostPath": "/srv/media-stack/zurg/scripts/plex_update.sh",
+    },
+    "rcloneConf": Object {
+      "hostPath": "/srv/media-stack/zurg/rclone.conf",
+    },
+  },
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/data",
+          "options": "rshared",
+          "src": "/srv/media-stack/media/Intake/zurg",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/srv/media-stack/zurg/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/srv/media-stack/zurg/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zurg": Object {
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/plex_update.sh",
+          "src": "/srv/media-stack/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "dst": "/app/config.yml",
+          "src": "/srv/media-stack/zurg/config.yml",
+        },
+        Object {
+          "dst": "/app/data",
+          "src": "/srv/media-stack/zurg/data",
+        },
+        Object {
+          "dst": "/media",
+          "src": "/srv/media-stack/media",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "9999:9999",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — single-container patterns bazarr — basic media + config mount 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/srv/media-stack/bazarr/config/config.ini",
+    },
+  },
+  "image": "linuxserver/bazarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/srv/media-stack/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/srv/media-stack/bazarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "6767:6767",
+  ],
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — single-container patterns seasonarr — bridge networking + port remap 1`] = `
+Object {
+  "image": "ghcr.io/d3v1l1989/seasonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/app/data",
+      "src": "/srv/media-stack/seasonarr",
+    },
+  ],
+  "networkMode": "bridge",
+  "ports": Array [
+    "8500:8000",
+  ],
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — single-container patterns sonarr — Servarr with secret-driven config.xml 1`] = `
+Object {
+  "files": Object {
+    "configXml": Object {
+      "hostPath": "/srv/media-stack/sonarr/config.xml",
+    },
+  },
+  "image": "lscr.io/linuxserver/sonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/srv/media-stack/media",
+    },
+    Object {
+      "dst": "/media/Intake",
+      "src": "/srv/media-stack/media/Intake",
+    },
+    Object {
+      "dst": "/cache",
+      "src": "/srv/media-stack/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/srv/media-stack/sonarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8989:8989",
+  ],
+}
+`;
+
+exports[`scenario: docker-custom-root serviceMeta — single-container patterns tautulli — secret-driven config.ini 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/srv/media-stack/tautulli/config.ini",
+    },
+  },
+  "image": "lscr.io/linuxserver/tautulli:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/srv/media-stack/tautulli",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8181:8181",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root mediaServerMeta emby — Emby-flavored fetchScript + adminPassword secret 1`] = `
+Object {
+  "image": "emby/embyserver:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/opt/surge/emby",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/opt/surge/media",
+    },
+    Object {
+      "dst": "/transcoding-temp",
+      "src": "/opt/surge/emby/transcoding-temp",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root mediaServerMeta jellyfin — fetchScript + transcodes on cache 1`] = `
+Object {
+  "image": "lscr.io/linuxserver/jellyfin:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/opt/surge/jellyfin",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/opt/surge/media",
+    },
+    Object {
+      "dst": "/transcodes",
+      "src": "/opt/surge/jellyfin/transcodes",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root mediaServerMeta plex — host networking + library auto-creation paths 1`] = `
+Object {
+  "image": "plexinc/pms-docker:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/opt/surge/plex",
+    },
+    Object {
+      "dst": "/transcode",
+      "src": "/opt/surge/plex/transcode",
+    },
+    Object {
+      "dst": "/data",
+      "src": "/opt/surge/media",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "32400:32400",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — multi-container patterns nzbdav — postDeployScript-gated rclone sibling 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "nzbdav": Object {
+      "image": "nzbdav/nzbdav:alpha",
+      "mounts": Array [
+        Object {
+          "dst": "/config",
+          "src": "/opt/surge/nzbdav",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "3000:3000",
+      ],
+    },
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/nzbdav",
+          "options": "rshared",
+          "src": "/opt/surge/media/Intake/nzbdav",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/opt/surge/nzbdav/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/opt/surge/nzbdav/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+  },
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — multi-container patterns zilean — postgres sibling + bridge net + secrets 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "postgres": Object {
+      "image": "postgres:17.2-alpine",
+      "mounts": Array [
+        Object {
+          "dst": "/var/lib/postgresql/data/pgdata",
+          "src": "/opt/surge/zilean/postgres/pgdata",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zilean": Object {
+      "image": "ipromknight/zilean:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/data",
+          "src": "/opt/surge/zilean/data",
+        },
+        Object {
+          "dst": "/tmp",
+          "src": "/opt/surge/zilean/tmp",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "8192:8181",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — multi-container patterns zurg — rclone sibling + FUSE caps + compose.files 1`] = `
+Object {
+  "files": Object {
+    "configYml": Object {
+      "hostPath": "/opt/surge/zurg/config.yml",
+    },
+    "plexUpdateSh": Object {
+      "hostPath": "/opt/surge/zurg/scripts/plex_update.sh",
+    },
+    "rcloneConf": Object {
+      "hostPath": "/opt/surge/zurg/rclone.conf",
+    },
+  },
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/data",
+          "options": "rshared",
+          "src": "/opt/surge/media/Intake/zurg",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/opt/surge/zurg/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/opt/surge/zurg/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zurg": Object {
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/plex_update.sh",
+          "src": "/opt/surge/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "dst": "/app/config.yml",
+          "src": "/opt/surge/zurg/config.yml",
+        },
+        Object {
+          "dst": "/app/data",
+          "src": "/opt/surge/zurg/data",
+        },
+        Object {
+          "dst": "/media",
+          "src": "/opt/surge/media",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "9999:9999",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — single-container patterns bazarr — basic media + config mount 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/opt/surge/bazarr/config/config.ini",
+    },
+  },
+  "image": "linuxserver/bazarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/opt/surge/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/opt/surge/bazarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "6767:6767",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — single-container patterns seasonarr — bridge networking + port remap 1`] = `
+Object {
+  "image": "ghcr.io/d3v1l1989/seasonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/app/data",
+      "src": "/opt/surge/seasonarr",
+    },
+  ],
+  "networkMode": "bridge",
+  "ports": Array [
+    "8500:8000",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — single-container patterns sonarr — Servarr with secret-driven config.xml 1`] = `
+Object {
+  "files": Object {
+    "configXml": Object {
+      "hostPath": "/opt/surge/sonarr/config.xml",
+    },
+  },
+  "image": "lscr.io/linuxserver/sonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/opt/surge/media",
+    },
+    Object {
+      "dst": "/media/Intake",
+      "src": "/opt/surge/media/Intake",
+    },
+    Object {
+      "dst": "/cache",
+      "src": "/opt/surge/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/opt/surge/sonarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8989:8989",
+  ],
+}
+`;
+
+exports[`scenario: docker-default-root serviceMeta — single-container patterns tautulli — secret-driven config.ini 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/opt/surge/tautulli/config.ini",
+    },
+  },
+  "image": "lscr.io/linuxserver/tautulli:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/opt/surge/tautulli",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8181:8181",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off mediaServerMeta emby — Emby-flavored fetchScript + adminPassword secret 1`] = `
+Object {
+  "image": "emby/embyserver:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/emby",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/mnt/user/media",
+    },
+    Object {
+      "dst": "/transcoding-temp",
+      "src": "/mnt/user/emby/transcoding-temp",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off mediaServerMeta jellyfin — fetchScript + transcodes on cache 1`] = `
+Object {
+  "image": "lscr.io/linuxserver/jellyfin:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/jellyfin",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/mnt/user/media",
+    },
+    Object {
+      "dst": "/transcodes",
+      "src": "/mnt/user/jellyfin/transcodes",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off mediaServerMeta plex — host networking + library auto-creation paths 1`] = `
+Object {
+  "image": "plexinc/pms-docker:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/plex",
+    },
+    Object {
+      "dst": "/transcode",
+      "src": "/mnt/user/plex/transcode",
+    },
+    Object {
+      "dst": "/data",
+      "src": "/mnt/user/media",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "32400:32400",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — multi-container patterns nzbdav — postDeployScript-gated rclone sibling 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "nzbdav": Object {
+      "image": "nzbdav/nzbdav:alpha",
+      "mounts": Array [
+        Object {
+          "dst": "/config",
+          "src": "/mnt/user/appdata/nzbdav",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "3000:3000",
+      ],
+    },
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/nzbdav",
+          "options": "rshared",
+          "src": "/mnt/user/media/Intake/nzbdav",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/mnt/user/appdata/nzbdav/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/mnt/user/nzbdav/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — multi-container patterns zilean — postgres sibling + bridge net + secrets 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "postgres": Object {
+      "image": "postgres:17.2-alpine",
+      "mounts": Array [
+        Object {
+          "dst": "/var/lib/postgresql/data/pgdata",
+          "src": "/mnt/user/appdata/zilean/postgres/pgdata",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zilean": Object {
+      "image": "ipromknight/zilean:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/data",
+          "src": "/mnt/user/appdata/zilean/data",
+        },
+        Object {
+          "dst": "/tmp",
+          "src": "/mnt/user/appdata/zilean/tmp",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "8192:8181",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — multi-container patterns zurg — rclone sibling + FUSE caps + compose.files 1`] = `
+Object {
+  "files": Object {
+    "configYml": Object {
+      "hostPath": "/mnt/user/appdata/zurg/config.yml",
+    },
+    "plexUpdateSh": Object {
+      "hostPath": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+    },
+    "rcloneConf": Object {
+      "hostPath": "/mnt/user/appdata/zurg/rclone.conf",
+    },
+  },
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/data",
+          "options": "rshared",
+          "src": "/mnt/user/media/Intake/zurg",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/mnt/user/appdata/zurg/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/mnt/user/zurg/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zurg": Object {
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/plex_update.sh",
+          "src": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "dst": "/app/config.yml",
+          "src": "/mnt/user/appdata/zurg/config.yml",
+        },
+        Object {
+          "dst": "/app/data",
+          "src": "/mnt/user/appdata/zurg/data",
+        },
+        Object {
+          "dst": "/media",
+          "src": "/mnt/user/media",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "9999:9999",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — single-container patterns bazarr — basic media + config mount 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/mnt/user/appdata/bazarr/config/config.ini",
+    },
+  },
+  "image": "linuxserver/bazarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/mnt/user/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/bazarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "6767:6767",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — single-container patterns seasonarr — bridge networking + port remap 1`] = `
+Object {
+  "image": "ghcr.io/d3v1l1989/seasonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/app/data",
+      "src": "/mnt/user/appdata/seasonarr",
+    },
+  ],
+  "networkMode": "bridge",
+  "ports": Array [
+    "8500:8000",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — single-container patterns sonarr — Servarr with secret-driven config.xml 1`] = `
+Object {
+  "files": Object {
+    "configXml": Object {
+      "hostPath": "/mnt/user/appdata/sonarr/config.xml",
+    },
+  },
+  "image": "lscr.io/linuxserver/sonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/mnt/user/media",
+    },
+    Object {
+      "dst": "/media/Intake",
+      "src": "/mnt/user/media/Intake",
+    },
+    Object {
+      "dst": "/cache",
+      "src": "/mnt/user/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/sonarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8989:8989",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-off serviceMeta — single-container patterns tautulli — secret-driven config.ini 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/mnt/user/appdata/tautulli/config.ini",
+    },
+  },
+  "image": "lscr.io/linuxserver/tautulli:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/tautulli",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8181:8181",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on mediaServerMeta emby — Emby-flavored fetchScript + adminPassword secret 1`] = `
+Object {
+  "image": "emby/embyserver:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/emby",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache/media",
+    },
+    Object {
+      "dst": "/transcoding-temp",
+      "src": "/mnt/cache/emby/transcoding-temp",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on mediaServerMeta jellyfin — fetchScript + transcodes on cache 1`] = `
+Object {
+  "image": "lscr.io/linuxserver/jellyfin:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/jellyfin",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache/media",
+    },
+    Object {
+      "dst": "/transcodes",
+      "src": "/mnt/cache/jellyfin/transcodes",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on mediaServerMeta plex — host networking + library auto-creation paths 1`] = `
+Object {
+  "image": "plexinc/pms-docker:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/plex",
+    },
+    Object {
+      "dst": "/transcode",
+      "src": "/mnt/cache/plex/transcode",
+    },
+    Object {
+      "dst": "/data",
+      "src": "/mnt/cache/media",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "32400:32400",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — multi-container patterns nzbdav — postDeployScript-gated rclone sibling 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "nzbdav": Object {
+      "image": "nzbdav/nzbdav:alpha",
+      "mounts": Array [
+        Object {
+          "dst": "/config",
+          "src": "/mnt/user/appdata/nzbdav",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "3000:3000",
+      ],
+    },
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/nzbdav",
+          "options": "rshared",
+          "src": "/mnt/cache/media/Intake/nzbdav",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/mnt/user/appdata/nzbdav/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/mnt/cache/nzbdav/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — multi-container patterns zilean — postgres sibling + bridge net + secrets 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "postgres": Object {
+      "image": "postgres:17.2-alpine",
+      "mounts": Array [
+        Object {
+          "dst": "/var/lib/postgresql/data/pgdata",
+          "src": "/mnt/user/appdata/zilean/postgres/pgdata",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zilean": Object {
+      "image": "ipromknight/zilean:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/data",
+          "src": "/mnt/user/appdata/zilean/data",
+        },
+        Object {
+          "dst": "/tmp",
+          "src": "/mnt/user/appdata/zilean/tmp",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "8192:8181",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — multi-container patterns zurg — rclone sibling + FUSE caps + compose.files 1`] = `
+Object {
+  "files": Object {
+    "configYml": Object {
+      "hostPath": "/mnt/user/appdata/zurg/config.yml",
+    },
+    "plexUpdateSh": Object {
+      "hostPath": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+    },
+    "rcloneConf": Object {
+      "hostPath": "/mnt/user/appdata/zurg/rclone.conf",
+    },
+  },
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/data",
+          "options": "rshared",
+          "src": "/mnt/cache/media/Intake/zurg",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/mnt/user/appdata/zurg/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/mnt/cache/zurg/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zurg": Object {
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/plex_update.sh",
+          "src": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "dst": "/app/config.yml",
+          "src": "/mnt/user/appdata/zurg/config.yml",
+        },
+        Object {
+          "dst": "/app/data",
+          "src": "/mnt/user/appdata/zurg/data",
+        },
+        Object {
+          "dst": "/media",
+          "src": "/mnt/cache/media",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "9999:9999",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — single-container patterns bazarr — basic media + config mount 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/mnt/user/appdata/bazarr/config/config.ini",
+    },
+  },
+  "image": "linuxserver/bazarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/bazarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "6767:6767",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — single-container patterns seasonarr — bridge networking + port remap 1`] = `
+Object {
+  "image": "ghcr.io/d3v1l1989/seasonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/app/data",
+      "src": "/mnt/user/appdata/seasonarr",
+    },
+  ],
+  "networkMode": "bridge",
+  "ports": Array [
+    "8500:8000",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — single-container patterns sonarr — Servarr with secret-driven config.xml 1`] = `
+Object {
+  "files": Object {
+    "configXml": Object {
+      "hostPath": "/mnt/user/appdata/sonarr/config.xml",
+    },
+  },
+  "image": "lscr.io/linuxserver/sonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache/media",
+    },
+    Object {
+      "dst": "/media/Intake",
+      "src": "/mnt/cache/media/Intake",
+    },
+    Object {
+      "dst": "/cache",
+      "src": "/mnt/cache/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/sonarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8989:8989",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on serviceMeta — single-container patterns tautulli — secret-driven config.ini 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/mnt/user/appdata/tautulli/config.ini",
+    },
+  },
+  "image": "lscr.io/linuxserver/tautulli:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/tautulli",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8181:8181",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool mediaServerMeta emby — Emby-flavored fetchScript + adminPassword secret 1`] = `
+Object {
+  "image": "emby/embyserver:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/emby",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache_nvme/media",
+    },
+    Object {
+      "dst": "/transcoding-temp",
+      "src": "/mnt/cache_nvme/emby/transcoding-temp",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool mediaServerMeta jellyfin — fetchScript + transcodes on cache 1`] = `
+Object {
+  "image": "lscr.io/linuxserver/jellyfin:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/jellyfin",
+    },
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache_nvme/media",
+    },
+    Object {
+      "dst": "/transcodes",
+      "src": "/mnt/cache_nvme/jellyfin/transcodes",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "8096:8096",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool mediaServerMeta plex — host networking + library auto-creation paths 1`] = `
+Object {
+  "image": "plexinc/pms-docker:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/plex",
+    },
+    Object {
+      "dst": "/transcode",
+      "src": "/mnt/cache_nvme/plex/transcode",
+    },
+    Object {
+      "dst": "/data",
+      "src": "/mnt/cache_nvme/media",
+    },
+  ],
+  "networkMode": "host",
+  "ports": Array [
+    "32400:32400",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — multi-container patterns nzbdav — postDeployScript-gated rclone sibling 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "nzbdav": Object {
+      "image": "nzbdav/nzbdav:alpha",
+      "mounts": Array [
+        Object {
+          "dst": "/config",
+          "src": "/mnt/user/appdata/nzbdav",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "3000:3000",
+      ],
+    },
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/nzbdav",
+          "options": "rshared",
+          "src": "/mnt/cache_nvme/media/Intake/nzbdav",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/mnt/user/appdata/nzbdav/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/mnt/cache_nvme/nzbdav/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — multi-container patterns zilean — postgres sibling + bridge net + secrets 1`] = `
+Object {
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "postgres": Object {
+      "image": "postgres:17.2-alpine",
+      "mounts": Array [
+        Object {
+          "dst": "/var/lib/postgresql/data/pgdata",
+          "src": "/mnt/user/appdata/zilean/postgres/pgdata",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zilean": Object {
+      "image": "ipromknight/zilean:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/data",
+          "src": "/mnt/user/appdata/zilean/data",
+        },
+        Object {
+          "dst": "/tmp",
+          "src": "/mnt/user/appdata/zilean/tmp",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "8192:8181",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — multi-container patterns zurg — rclone sibling + FUSE caps + compose.files 1`] = `
+Object {
+  "files": Object {
+    "configYml": Object {
+      "hostPath": "/mnt/user/appdata/zurg/config.yml",
+    },
+    "plexUpdateSh": Object {
+      "hostPath": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+    },
+    "rcloneConf": Object {
+      "hostPath": "/mnt/user/appdata/zurg/rclone.conf",
+    },
+  },
+  "image": undefined,
+  "networkMode": undefined,
+  "ports": undefined,
+  "services": Object {
+    "rclone": Object {
+      "capAdd": Array [
+        "SYS_ADMIN",
+      ],
+      "devices": Array [
+        "/dev/fuse:/dev/fuse:rwm",
+      ],
+      "image": "rclone/rclone:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/data",
+          "options": "rshared",
+          "src": "/mnt/cache_nvme/media/Intake/zurg",
+        },
+        Object {
+          "dst": "/config/rclone/rclone.conf",
+          "src": "/mnt/user/appdata/zurg/rclone.conf",
+        },
+        Object {
+          "dst": "/cache",
+          "src": "/mnt/cache_nvme/zurg/rclone-cache",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": undefined,
+    },
+    "zurg": Object {
+      "image": "ghcr.io/debridmediamanager/zurg-testing:latest",
+      "mounts": Array [
+        Object {
+          "dst": "/app/plex_update.sh",
+          "src": "/mnt/user/appdata/zurg/scripts/plex_update.sh",
+        },
+        Object {
+          "dst": "/app/config.yml",
+          "src": "/mnt/user/appdata/zurg/config.yml",
+        },
+        Object {
+          "dst": "/app/data",
+          "src": "/mnt/user/appdata/zurg/data",
+        },
+        Object {
+          "dst": "/media",
+          "src": "/mnt/cache_nvme/media",
+        },
+      ],
+      "networkMode": "bridge",
+      "ports": Array [
+        "9999:9999",
+      ],
+    },
+  },
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — single-container patterns bazarr — basic media + config mount 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/mnt/user/appdata/bazarr/config/config.ini",
+    },
+  },
+  "image": "linuxserver/bazarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache_nvme/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/bazarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "6767:6767",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — single-container patterns seasonarr — bridge networking + port remap 1`] = `
+Object {
+  "image": "ghcr.io/d3v1l1989/seasonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/app/data",
+      "src": "/mnt/user/appdata/seasonarr",
+    },
+  ],
+  "networkMode": "bridge",
+  "ports": Array [
+    "8500:8000",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — single-container patterns sonarr — Servarr with secret-driven config.xml 1`] = `
+Object {
+  "files": Object {
+    "configXml": Object {
+      "hostPath": "/mnt/user/appdata/sonarr/config.xml",
+    },
+  },
+  "image": "lscr.io/linuxserver/sonarr:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/media",
+      "src": "/mnt/cache_nvme/media",
+    },
+    Object {
+      "dst": "/media/Intake",
+      "src": "/mnt/cache_nvme/media/Intake",
+    },
+    Object {
+      "dst": "/cache",
+      "src": "/mnt/cache_nvme/media",
+    },
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/sonarr",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8989:8989",
+  ],
+}
+`;
+
+exports[`scenario: unraid-cache-on-custom-pool serviceMeta — single-container patterns tautulli — secret-driven config.ini 1`] = `
+Object {
+  "files": Object {
+    "configIni": Object {
+      "hostPath": "/mnt/user/appdata/tautulli/config.ini",
+    },
+  },
+  "image": "lscr.io/linuxserver/tautulli:latest",
+  "mounts": Array [
+    Object {
+      "dst": "/config",
+      "src": "/mnt/user/appdata/tautulli",
+    },
+  ],
+  "networkMode": undefined,
+  "ports": Array [
+    "8181:8181",
+  ],
+}
+`;

@@ -1,323 +1,315 @@
-# Surge Web Installer
+# Surge
 
-A web-based installer that allows users to deploy Docker containers and manage services on their local machines through a secure, authenticated web interface.
+A wizard for self-hosted media stacks. Pick your services in the
+browser, get a single ZIP with everything you need to run them
+(`docker-compose.yaml`, seeded config files, secrets, post-deploy
+glue scripts, README), and run it on your target host.
 
-## 🌟 Features
-
-- **🔐 Web Authentication**: Secure login system for personalized installations
-- **🖥️ Remote Deployment**: Deploy Docker containers to local machines via web interface
-- **📡 Real-time Communication**: Live progress updates during deployment
-- **🎯 Service Configuration**: Configure Plex/Jellyfin/Emby media stacks
-- **🛠️ Media Automation**: Set up Radarr, Sonarr, Prowlarr, Bazarr, and more
-- **📊 Live Monitoring**: Real-time deployment progress and status
-- **🔒 Secure Connection**: Encrypted communication between web app and local daemon
-
-## 🏗️ Architecture
+No backend, no account, no telemetry. The wizard is a static React
+app — your config never leaves the browser until *you* download the
+bundle.
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Browser   │◄──►│  Surge Server   │◄──►│ Local Machine   │
-│   (React App)   │    │ (Flask + WS)    │    │ (Python Daemon) │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-     Authentication         WebSocket              Docker
-     Configuration         Real-time Updates      Git Operations
-     Live Monitoring       Command Routing        File Management
+┌─────────────────────────┐         ┌─────────────────────────┐
+│  Wizard (browser)       │         │  Your deploy host       │
+│  • Pick services        │         │  • Unpack the ZIP       │
+│  • Configure paths      │  ZIP    │  • Run the orchestrator │
+│  • Provide API keys     │ ──────► │  • Orchestrator runs    │
+│  • Generate bundle      │         │    docker compose up    │
+│                         │         │  • Post-deploy scripts  │
+│  Static React           │         │    auto-wire services   │
+└─────────────────────────┘         └─────────────────────────┘
 ```
 
-## 🚀 Quick Start
 
-### 1. Start the Web Installer
+## What's in the bundle
+
+Generating a bundle gives you a `surge-deploy.zip` containing:
+
+- `docker-compose.yaml` — every service the wizard rendered, with
+  resolved volumes, env vars, healthchecks, and dependencies
+- `config.json` — your wizard answers (so re-running the orchestrator
+  produces the same stack)
+- `manifest.json` — the schema export for the services you picked
+- `surge_orchestrator.py` — single-file, **stdlib-only** Python that
+  runs the rest of the lifecycle on your host
+- `scripts/` — the `fetch-*.py` and `configure-*.py` helpers that
+  bootstrap inter-service wiring (API keys, library creation, indexer
+  links)
+- `seeded/` — pre-populated config files (e.g. `sonarr/config.xml`
+  with Surge's chosen API key) so services come up authenticated
+- `README.md` — bundle-specific instructions for the host operator
+
+
+## Supported services
+
+**Media servers** (mutually exclusive — pick one):
+
+| Service     | Notes                                           |
+|-------------|-------------------------------------------------|
+| Plex        | Auto-claim from `plex.tv/claim`; auto-creates Plex libraries from CineSync output |
+| Jellyfin    | Published-URL config; secrets fetched at runtime |
+| Emby        | Published-URL config; secrets fetched at runtime |
+
+**Media management** (the *arr suite):
+
+| Service     | Notes                                           |
+|-------------|-------------------------------------------------|
+| Sonarr      | Pre-seeded API key; auto-wired to Bazarr / Episeerr / Prowlarr |
+| Radarr      | Pre-seeded API key; same auto-wiring as Sonarr  |
+| Bazarr      | Subtitle manager; configures Sonarr/Radarr instances post-deploy |
+| Prowlarr    | Indexer manager; auto-registers downstream apps |
+| CineSync    | Library structure + auto-creates Plex libraries |
+| Pulsarr     | Plex/Overseerr integration                      |
+| Boxarr      | Box-set tracking; auto-registers via Boxarr API |
+| GAPS        | Missing-movies finder for Radarr                |
+| Kometa      | Metadata + collections via seeded `config.yml`  |
+| Posterizarr | Poster/artwork manager                          |
+| mdblistarr  | MDBList → *arr list sync                        |
+| Seasonarr   | Season-pack handler                             |
+
+**Indexers / proxies:**
+
+| Service       | Notes                                         |
+|---------------|-----------------------------------------------|
+| Flaresolverr  | Cloudflare bypass proxy                       |
+| Zilean        | DMM scraper; multi-container with PostgreSQL  |
+
+**Download clients / debrid:**
+
+| Service     | Notes                                           |
+|-------------|-------------------------------------------------|
+| SABnzbd     | Pre-seeded API key                              |
+| RDT-Client  | Real-Debrid client; consumes `rdApiToken`       |
+| Decypharr   | Multi-debrid (RD/AD/Premiumize/TorBox)          |
+| NZBDAV      | NZB → WebDAV mount; multi-container             |
+| Zurg        | Real-Debrid mount; multi-container with rclone  |
+
+**Requests + dashboards:**
+
+| Service     | Notes                                           |
+|-------------|-------------------------------------------------|
+| Overseerr   | Request manager (`seerr` key in schema)         |
+| Episeerr    | Episode-level requests; auto-wires Prowlarr + SABnzbd |
+| Tautulli    | Plex monitoring; pre-seeded API key             |
+
+**Networking add-ons:**
+
+| Service     | Notes                                           |
+|-------------|-------------------------------------------------|
+| Pangolin (Newt) | Tunneled reverse proxy — public access without port-forwarding |
+| Gluetun     | Per-container VPN (Mullvad / ProtonVPN / NordVPN / etc.) |
+
+
+## Wizard features
+
+**Step 1 — Media Server.** Plex / Jellyfin / Emby tile picker. Plex
+flow includes a 4-minute claim-token countdown so you don't paste a
+stale token.
+
+**Step 2 — Storage Config.** Unraid (cache-pool aware) or generic
+Docker. Lays out where each service's appdata lives, what mediaRoot
+points to, PUID/PGID/UMASK. Path preview shows the resolved layout
+before you commit.
+
+**Step 3 — External APIs.** TMDB (with browser-side test button),
+FanArt.tv, TVDB, MDBList, Real-Debrid, AllDebrid, Premiumize, Discord
+webhooks. Each field shows which services consume it. Plus the
+networking config: Pangolin endpoint + Newt credentials, Gluetun
+provider with capability-driven WireGuard / OpenVPN field switching.
+
+**Step 4 — Service Selection.** 23 service tiles plus the media
+server, organized by category (Media, Indexers, Downloads, Debrid,
+Requests, Metadata, Monitoring, Networking). Features:
+
+- **Quick-start presets** (Plex + *arr starter, Jellyfin minimalist,
+  Debrid power user, etc.)
+- **User presets** — save the current selection as a named preset,
+  load later
+- **Live stats sidebar** — container count, port count, secret
+  count, scripts to run
+- **Service search** — filter tiles by name or description
+- **Dependency warnings** — yellow `!` when a tile needs an API key
+  or peer service that isn't set up
+- **Per-tile VPN toggle** — when Gluetun is enabled, every routable
+  service gets a 🛡 button that hoists its ports onto Gluetun and
+  flips its `network_mode`
+- **Service details modal** — click the `i` to see image, ports,
+  upstream repo, healthcheck command
+
+**Step 5 — Deploy Preview.** Read-only summary of everything the
+orchestrator will do. Expandable accordions:
+
+- **Generate bundle** — produces the ZIP
+- **Re-deploy diff** — shows what's added/removed since the prior
+  bundle (preserves secrets across re-runs)
+- **Connection graph** — interactive Mermaid diagram of who reads
+  whose secrets/runtime values; click a node to jump back to its
+  tile
+- **Healthcheck reference + live status** — every service's
+  healthcheck command + endpoint; upload `status.json` from a
+  deployed host for live state
+- **Pangolin route preview** — copy-pasteable list of
+  `subdomain → container:port` for Pangolin's UI
+- **Image tags + pin suggestions** — checks Docker Hub for newer
+  semver-style tags
+- **Bundle inspector** — drag-and-drop a previous `surge-deploy.zip`
+  to see its config or reload it into the wizard
+- **Copy compose YAML** — full compose document to clipboard, no
+  download needed
+
+**Cross-cutting UX:**
+
+- **Wizard state persists in localStorage** — close the tab, your
+  config is still there
+- **Reset wizard** in the header clears it
+- **Restored-session toast** confirms when state was loaded back
+- **First-run onboarding tour** explains each step
+- **Keyboard shortcuts** — `?` for help overlay, `Ctrl/⌘+L` toggles
+  light mode, etc.
+- **Light / dark mode** — real palette swap, not a filter hack
+- **Settings export/import** — JSON of UI prefs (color mode, saved
+  presets, tour state). Wizard config and API keys are deliberately
+  *not* exported here — those travel with the deploy bundle so
+  secrets never end up in plaintext settings files
+- **Accessibility** — every interactive surface has aria-labels,
+  keyboard activation, focus-visible outlines
+
+
+## Quick start
 
 ```bash
 git clone https://github.com/your-repo/surge-web
-cd surge-web
-./deploy.sh
-```
-
-The web interface will be available at: https://surge.video
-
-### 2. Create Account & Login
-
-1. Visit https://surge.video
-2. Register a new account or login
-3. You'll see the Surge setup wizard
-
-### 3. Connect Your Local Machine
-
-1. In the Deploy step, click "Setup Instructions"
-2. Generate a connection token
-3. Run the provided command on your local machine:
-
-```bash
-curl -sSL https://surge.video/install-daemon.sh | bash
-~/.surge-daemon/start.sh --server wss://surge.video/socket.io/ --token YOUR_TOKEN
-```
-
-### 4. Configure & Deploy
-
-1. Configure your media server (Plex/Jellyfin/Emby)
-2. Set storage paths and API keys
-3. Select additional services
-4. Click "Deploy Services"
-5. Watch real-time progress as services are installed
-
-## 📋 Requirements
-
-### Web Server Requirements
-- Docker & Docker Compose
-- Ports 3100 (frontend) and 5001 (backend) available
-
-### Local Machine Requirements
-- **Linux/macOS** (Windows WSL2 supported)
-- **Docker** installed and running
-- **Git** installed
-- **Python 3.7+** installed
-- **Internet connection** for downloading containers
-
-## 🛠️ Development Setup
-
-### Quick Setup (Recommended)
-```bash
-# Run the development setup script to configure assets
-./setup-development.sh
-
-# Start backend
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python app.py
-
-# Start frontend (new terminal)
-cd frontend
+cd surge-web/frontend
 npm install
 npm start
 ```
 
-### Manual Setup
-#### Backend Setup
+Open <http://localhost:3000>, walk through the wizard, hit **Generate
+deploy bundle**. Copy the resulting `surge-deploy.zip` to your target
+host and:
+
 ```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python app.py
+unzip surge-deploy.zip && cd surge-deploy
+python3 surge_orchestrator.py --manifest manifest.json --config config.json
 ```
 
-#### Frontend Setup
+That's it. Orchestrator stops here on first run if you have any
+fetchScripts that need post-deploy validation; just re-run it once
+the relevant services are healthy.
+
+
+## Orchestrator CLI
+
+The orchestrator is **stdlib-only Python 3.8+** — no `pip install`
+required on your deploy host. All the lifecycle commands:
+
+```bash
+# Standard deploy: render compose, write seeded files, generate
+# secrets, docker compose up, run post-deploy scripts.
+python3 surge_orchestrator.py \
+  --manifest manifest.json \
+  --config   config.json
+
+# Dry-run: resolve everything, write nothing, run nothing.
+python3 surge_orchestrator.py ... --dry-run
+
+# Stop the stack and tar configRoot + state into a backup.
+python3 surge_orchestrator.py ... --backup [path/to/backup.tar.gz]
+
+# Restore from a backup tarball.
+python3 surge_orchestrator.py ... --restore path/to/backup.tar.gz
+
+# Snapshot live container health to .surge/status.json — upload into
+# the wizard's healthcheck panel for live state.
+python3 surge_orchestrator.py ... --status [path/to/status.json]
+
+# Skip docker compose up (just write artifacts).
+python3 surge_orchestrator.py ... --skip-up
+
+# Skip post-deploy scripts.
+python3 surge_orchestrator.py ... --skip-scripts
+```
+
+Default paths: backups land in `.surge/backups/`, state in
+`.surge/state.json`, status in `.surge/status.json`.
+
+
+## Re-deploys
+
+Re-running the orchestrator with the same `state.json` preserves
+every Surge-generated secret. To roll a service's secret, delete its
+entry from `state.json` and re-run.
+
+The wizard's **Re-deploy diff** view (Step 5) shows what changed
+between successive bundles before you regenerate. Useful for sanity
+checks before pushing a new bundle to production.
+
+
+## Development
+
 ```bash
 cd frontend
-npm install
-npm start
-```
 
-### Local Daemon Setup
-```bash
-cd local-daemon
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 surge-daemon.py --server ws://localhost:5001/socket.io/
-```
+# Lint + format
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
 
-## 🏗️ Production Deployment
+# Tests
+npm test                         # watch mode
+CI=true npm test --watchAll=false  # one-shot
 
-### Automated Build & Deploy
-```bash
-# Build for production with proper asset paths
-./build-production.sh
-
-# Deploy to production
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Manual Production Build
-```bash
-# Build frontend with optimized assets
-cd frontend
+# Production build
 npm run build
-cd ..
-
-# Deploy with production docker-compose
-docker-compose -f docker-compose.prod.yml up -d
 ```
-
-### Shared Hosting Deployment
-```bash
-# For shared hosting without Docker
-./deploy-shared-hosting.sh
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env` file in the root directory:
 
 ```bash
-# Security
-SECRET_KEY=your-secret-key-here
+cd orchestrator
 
-# Server Configuration
-FLASK_ENV=production
-PUID=1000
-PGID=1000
-TZ=UTC
-
-# Database (optional - uses in-memory by default)
-DATABASE_URL=sqlite:///surge.db
+# Tests (pytest)
+python3 -m pytest tests/ -v
+# Lint (ruff + black, configured in pyproject.toml)
+ruff check . && black --check .
 ```
 
-### Supported Services
+Test counts at time of writing: **307 frontend tests, 90
+orchestrator tests, all passing**.
 
-**Media Servers:**
-- Plex Media Server
-- Jellyfin
-- Emby Server
 
-**Media Automation:**
-- Radarr (Movies)
-- Sonarr (TV Shows)
-- Prowlarr (Indexers)
-- Bazarr (Subtitles)
-- CineSync (Library Management)
+## Repo layout
 
-**Download Clients:**
-- NZBGet (Usenet)
-- RDT-Client (Real-Debrid)
-- qBittorrent (Torrents)
-
-**Monitoring & Enhancement:**
-- Overseerr (Request Management)
-- Tautulli (Plex Monitoring)
-- Kometa (Metadata Management)
-
-## 🔒 Security
-
-### Authentication
-- JWT-based authentication system
-- Session management with automatic expiration
-- Secure password hashing (implement bcrypt in production)
-
-### Communication Security
-- WebSocket connections with token authentication
-- All daemon commands are signed and verified
-- Local daemon runs with minimal privileges
-
-### Best Practices
-- Change default SECRET_KEY in production
-- Use HTTPS in production deployments
-- Regularly update daemon tokens
-- Monitor daemon connections and activity
-
-## 🌐 Production Deployment
-
-### Using Docker Swarm
-```bash
-docker swarm init
-docker stack deploy -c docker-compose.prod.yml surge
+```
+frontend/                React wizard (Create React App + MUI)
+  src/
+    AdditionalServicesStep.js   Schema for all 23 services
+    mediaServerMeta.js          Schema for Plex/Jellyfin/Emby
+    composePreview.js           Read-only compose generator
+    deployBundle.js             ZIP builder
+    *.js                         Step components, panels, utilities
+    __tests__/                  Jest + RTL test suite
+orchestrator/
+  surge_orchestrator.py         Single-file Python orchestrator
+  tests/                        pytest suite
+docs/
+  adding-a-service.md           Guide for contributors adding a service
 ```
 
-### Using Kubernetes
-```bash
-kubectl apply -f k8s/
-```
 
-### Reverse Proxy (Nginx)
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name surge.video;
-    
-    location / {
-        proxy_pass http://localhost:3100;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-    
-    location /socket.io/ {
-        proxy_pass http://localhost:5001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-}
-```
+## Contributing
 
-## 🐛 Troubleshooting
+Adding a new service is mostly schema work — see
+[docs/adding-a-service.md](docs/adding-a-service.md) for a walkthrough
+covering the marker types (`fromSecret`, `fromService`, `fromConfig`,
+`generate`, `whenService`, `whenMediaServer`), the three secret
+pipelines (upfront, fetchScript, postDeployScript), and a worked
+example.
 
-### Common Issues
+Pull requests welcome. Run `npm run lint && npm test` and
+`pytest tests/` before opening one.
 
-**Daemon Won't Connect:**
-```bash
-# Check daemon logs
-~/.surge-daemon/start.sh --server ws://your-server/socket.io/ --token YOUR_TOKEN
 
-# Verify token is valid
-curl -H "Authorization: Bearer YOUR_TOKEN" http://your-server/api/client/status
-```
+## License
 
-**Docker Permission Errors:**
-```bash
-# Add user to docker group
-sudo usermod -aG docker $USER
-# Logout and login again
-```
-
-**Port Conflicts:**
-```bash
-# Check what's using ports
-sudo netstat -tlnp | grep :3100
-sudo netstat -tlnp | grep :5001
-
-# Kill conflicting processes or change ports in docker-compose.yml
-```
-
-### Debug Mode
-
-Enable debug logging:
-```bash
-# Backend debug
-FLASK_ENV=development python app.py
-
-# Daemon debug
-python3 surge-daemon.py --server ws://localhost:5001/socket.io/ --log-level DEBUG
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔮 Roadmap
-
-- [ ] **Multi-machine Support**: Deploy to multiple servers
-- [ ] **Service Templates**: Pre-configured service stacks
-- [ ] **Backup Management**: Automated configuration backups
-- [ ] **Health Monitoring**: Service health checks and alerts
-- [ ] **Plugin System**: Custom service integrations
-- [ ] **Mobile App**: Native mobile client
-- [ ] **Team Management**: Multi-user organizations
-- [ ] **Advanced Analytics**: Deployment metrics and insights
-
-## 📞 Support
-
-- **Documentation**: [Wiki](https://github.com/your-repo/surge-web/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/surge-web/issues)
-- **Discord**: [Community Server](https://discord.gg/your-server)
-- **Email**: support@your-domain.com
-
----
-
-**Made with ❤️ by the Surge Team**
+MIT — see [LICENSE](LICENSE).

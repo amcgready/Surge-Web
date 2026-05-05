@@ -1,0 +1,35 @@
+{
+  "_comment": "Docker-mode config for orchestrator end-to-end testing on a non-Unraid host. Same service mix as config.json but pointed at /tmp.",
+
+  "platform": "docker",
+  "docker": {
+    "rootPath": "/tmp/surge-test-root"
+  },
+
+  "mediaServer": "plex",
+  "plexSettings": {
+    "PLEX_CLAIM":   "claim-test-1234567890abcdef",
+    "ADVERTISE_IP": ""
+  },
+
+  "contentEnhancement": {
+    "sonarr":   true,
+    "radarr":   true,
+    "bazarr":   true,
+    "prowlarr": true,
+    "sabnzbd":  true,
+    "tautulli": true,
+    "cinesync": true,
+    "seerr":    true,
+    "nzbdav":   true
+  },
+
+  "_external_apis_comment": "Real RD token would unlock zurg/zilean too; left out of this fixture to keep the test tight.",
+
+  "tmdbApiKey": "test-tmdb-key-1234",
+
+  "cinesyncSettings": {
+    "animeSeparation":  false,
+    "fourKSeparation":  false
+  }
+}

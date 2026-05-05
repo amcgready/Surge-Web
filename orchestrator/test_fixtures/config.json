@@ -1,0 +1,33 @@
+{
+  "_comment": "Sample wizard config — Plex + *arr stack + CineSync + Tautulli on Unraid with cache. Used by the orchestrator's end-to-end smoke test.",
+
+  "platform": "unraid",
+  "unraid": {
+    "useCacheDrive": true,
+    "cachePath":     "/mnt/cache",
+    "appdataPath":   "/mnt/user/appdata"
+  },
+
+  "mediaServer": "plex",
+  "plexSettings": {
+    "PLEX_CLAIM":   "claim-test-1234567890abcdef",
+    "ADVERTISE_IP": ""
+  },
+
+  "contentEnhancement": {
+    "sonarr":   true,
+    "radarr":   true,
+    "bazarr":   true,
+    "prowlarr": true,
+    "sabnzbd":  true,
+    "tautulli": true,
+    "cinesync": true
+  },
+
+  "tmdbApiKey": "test-tmdb-key-1234",
+
+  "cinesyncSettings": {
+    "animeSeparation":  false,
+    "fourKSeparation":  false
+  }
+}

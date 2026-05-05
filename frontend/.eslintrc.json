@@ -1,0 +1,29 @@
+{
+  "root": true,
+  "extends": [
+    "react-app",
+    "react-app/jest"
+  ],
+  "rules": {
+    "no-unused-vars": ["warn", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }],
+    "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
+    "react-hooks/exhaustive-deps": "warn",
+    "react/jsx-key": "error",
+    "react/no-direct-mutation-state": "error",
+    "no-debugger": "error",
+    "eqeqeq": ["error", "smart"],
+    "prefer-const": "warn",
+    "no-var": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js", "**/*.test.jsx", "**/__tests__/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
+}

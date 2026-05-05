@@ -1,0 +1,51 @@
+# Surge orchestrator — Python tooling config.
+#
+# The production orchestrator is stdlib-only by design (it runs on the
+# user's deploy host, where we don't want to require pip install). Dev
+# tooling (pytest, ruff, black) is fine — those only run here.
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.git
+  | \.venv
+  | \.surge
+  | tests/.*/fixtures
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+extend-exclude = [
+    ".surge",
+    "tests/fixtures",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line length (black handles this)
+    "B008",   # don't perform function call in argument defaults — common in CLI argparse
+    "SIM108", # ternary if-else — sometimes the if/else is more readable
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011", "F841"]   # asserts and unused vars are fine in tests
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
