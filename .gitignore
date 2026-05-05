@@ -5,8 +5,6 @@ __pycache__/
 *.so
 .Python
 build/
-# But include frontend build
-!frontend/build/
 develop-eggs/
 dist/
 downloads/
@@ -336,3 +334,12 @@ config_local.py
 
 # Surge: scripts/orchestrator copied here by frontend's prebuild hook
 frontend/public/deploy_assets/
+
+# Built artifacts — produced by `npm run build`, deployed by CI from
+# the build job's working tree. NEVER commit these — a stale build
+# can quietly ship old (e.g. auth-era) UI code to surge.video.
+frontend/build/
+
+# Old prebuilt static-site bundle — replaced by the CI build pipeline.
+# Listed here so it can't be accidentally re-added.
+web/
