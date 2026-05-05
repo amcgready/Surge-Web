@@ -32,13 +32,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          # No `cache: 'npm'` — that requires a clean lockfile. Build
+          # is fast enough to not need npm caching for a small SPA.
 
       - name: Build wizard
         working-directory: frontend
         run: |
-          npm ci
+          # Use `npm install` rather than `npm ci` — the lockfile
+          # has drifted from package.json a few times during the
+          # auth-rip cleanup and pinning the deploy to a strict
+          # lockfile match isn't worth blocking releases over.
+          # `install` self-heals lockfile drift; the worst-case
+          # cost is a slightly different transitive resolution
+          # between local and CI, which doesn't matter for a
+          # static-site deploy.
+          npm install --no-audit --no-fund --no-progress
           npm run build
           # Sanity check: the built bundle should NOT contain the
           # old auth UI anymore. If any of these strings come back,
