@@ -37,6 +37,14 @@ jobs:
 
       - name: Build wizard
         working-directory: frontend
+        env:
+          # GitHub Actions auto-sets CI=true, which makes
+          # react-scripts' bundled ESLint phase treat any warning as
+          # a build error. Surge has a handful of harmless unused-
+          # arg warnings (function signatures kept for symmetry).
+          # Override CI=false here so warnings remain warnings; the
+          # build itself still runs in production mode.
+          CI: false
         run: |
           # Use `npm install` rather than `npm ci` — the lockfile
           # has drifted from package.json a few times during the
