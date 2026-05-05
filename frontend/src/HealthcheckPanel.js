@@ -2,6 +2,8 @@ import React from 'react';
 import {
   Box, Typography, Button, Stack, Chip, Alert,
 } from '@mui/material';
+import { serviceMeta } from './AdditionalServicesStep';
+import { mediaServerMeta } from './mediaServerMeta';
 import { getHealthcheck, extractHttpEndpoint } from './healthcheckUtils';
 
 /**

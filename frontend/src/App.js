@@ -9,20 +9,10 @@ import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import SettingsBackup from './SettingsBackup';
 import { validateStep } from './validateStep';
 import { palettes, paletteToCssVars } from './theme';
-import { Container, Typography, Box, Stepper, Step, StepLabel, Button, Tooltip, Divider, Alert, IconButton } from '@mui/material';
+import { Container, Typography, Box, Stepper, Step, StepLabel, Button, Tooltip, Alert } from '@mui/material';
 import SurgeLogo from './SurgeLogo';
 import bgImage from './assets/background.jpg';
-import radarrLogo from './assets/service-logos/radarr.png';
-import sonarrLogo from './assets/service-logos/sonarr.png';
-import prowlarrLogo from './assets/service-logos/prowlarr.png';
-import bazarrLogo from './assets/service-logos/bazarr.png';
-import cinesyncLogo from './assets/service-logos/cinesync.png';
-import placeholdarrLogo from './assets/service-logos/Placeholdarr.png';
 import { mediaServerOptions } from './mediaServerMeta';
-import nzbgetLogo from './assets/service-logos/NZBGet.png';
-import rdtClientLogo from './assets/service-logos/RDT-Client.png';
-import gapsLogo from './assets/service-logos/gaps.png';
-import decypharrLogo from './assets/service-logos/decypharr.png';
 
 const steps = [
   'Media Server',
@@ -56,60 +46,27 @@ function App() {
   // is a static frontend that produces a downloadable deploy bundle.)
 
 
-  // State for advanced config toggles for all services
-  const [showRadarrAdvanced, setShowRadarrAdvanced] = React.useState(false);
-  const [showSonarrAdvanced, setShowSonarrAdvanced] = React.useState(false);
-  const [showProwlarrAdvanced, setShowProwlarrAdvanced] = React.useState(false);
-  const [showBazarrAdvanced, setShowBazarrAdvanced] = React.useState(false);
+  // Per-service "show advanced" toggles. Only the three below are
+  // actively consumed by step components; the rest of the *arr-suite
+  // toggles got removed when each service's advanced section migrated
+  // into per-service detail dialogs in AdditionalServicesStep.
   const [showKometaAdvanced, setShowKometaAdvanced] = React.useState(false);
   const [showPosterizarrAdvanced, setShowPosterizarrAdvanced] = React.useState(false);
   const [showPlaceholdarrAdvanced, setShowPlaceholdarrAdvanced] = React.useState(false);
-  const [showNZBGetAdvanced, setShowNZBGetAdvanced] = React.useState(false);
-  const [showRdtClientAdvanced, setShowRdtClientAdvanced] = React.useState(false);
-  const [showGapsAdvanced, setShowGapsAdvanced] = React.useState(false);
-  const [showCliDebridAdvanced, setShowCliDebridAdvanced] = React.useState(false);
-  const [showImageMaidAdvanced, setShowImageMaidAdvanced] = React.useState(false);
-  const [showCineSyncAdvanced, setShowCineSyncAdvanced] = React.useState(false); // Only used in CineSync section now
-  const [showZurgAdvanced, setShowZurgAdvanced] = React.useState(false);
-  const [showDecypharrAdvanced, setShowDecypharrAdvanced] = React.useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [showNoMediaServerDialog, setShowNoMediaServerDialog] = React.useState(false);
-  // JSON parse error state
+  // JSON parse error banner — surfaced when a wizard JSON import
+  // fails to parse. setter is currently unused (no import path
+  // wired up in the post-auth-rip rewrite); we keep the read side
+  // around so the banner is ready when an import flow is added.
+  // eslint-disable-next-line no-unused-vars
   const [jsonParseError, setJsonParseError] = React.useState('');
-  // Monitoring & Interface toggles
-  const monitoringList = [
-    { key: 'homepage', name: 'Homepage', desc: 'Unified dashboard for your media server', logo: require('./assets/service-logos/homepage.png') },
-    { key: 'overseerr', name: 'Overseerr', desc: 'Media request and management tool', logo: require('./assets/service-logos/overseerr.png') },
-    { key: 'tautulli', name: 'Tautulli', desc: 'Plex monitoring and analytics', logo: require('./assets/service-logos/tautulli.png') }
-  ];
-  const [monitoring, setMonitoring] = React.useState({
-    homepage: true,
-    overseerr: true,
-    tautulli: true
-  });
-  // Content Enhancement toggles
-  const contentEnhancementList = [
-    { key: 'kometa', name: 'Kometa', desc: 'Collection and metadata management for Plex/Emby/Jellyfin', logo: require('./assets/service-logos/kometa.png') },
-    { key: 'posterizarr', name: 'Posterizarr', desc: 'Automated poster and artwork management', logo: require('./assets/service-logos/posterizarr.png') }
-  ];
+  // Content Enhancement toggles — drives the Service Selection grid.
+  // Defaults are merged with each service's defaultSelected map at
+  // load time so the user lands on a sensible starter config.
   const [contentEnhancement, setContentEnhancement] = React.useState({
     kometa: true,
     posterizarr: true
-  });
-  // Download Tools toggles
-
-  const downloadToolsList = [
-    { key: 'decypharr', name: 'Decypharr', desc: 'Decryption and post-processing tool', logo: decypharrLogo },
-    { key: 'gaps', name: 'GAPS', desc: 'Finds missing movies for Radarr', logo: gapsLogo },
-    { key: 'nzbget', name: 'NZBGet', desc: 'Efficient Usenet downloader', logo: nzbgetLogo },
-    { key: 'rdtclient', name: 'RDT-Client', desc: 'Real-Debrid download client', logo: rdtClientLogo }
-    // { key: 'zurg', name: 'Zurg', desc: 'NZBGet/Usenet automation tool', logo: zurgLogo },
-  ];
-  const [downloadTools, setDownloadTools] = React.useState({
-    decypharr: true,
-    gaps: true,
-    nzbget: true,
-    rdtclient: true
-    // zurg: true,
   });
   // Core Media Server tiles — sourced from mediaServerMeta so the
   // wizard's options stay in sync with the deployable compose templates.
@@ -119,46 +76,6 @@ function App() {
   // to suppress the first save effect — without it, the initial empty
   // state would clobber saved data before the load effect runs.
   const hydratedFromStorageRef = React.useRef(false);
-  const [showProgress, setShowProgress] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
-  const [progressMessage, setProgressMessage] = React.useState('');
-  const [timeEstimate, setTimeEstimate] = React.useState(0);
-
-  const [mediaAutomation, setMediaAutomation] = React.useState({
-    radarr: true,
-    sonarr: true,
-    prowlarr: true,
-    bazarr: true,
-    cinesync: true,
-    placeholdarr: true
-  });
-
-  const defaultUrls = {
-    radarr: 'http://radarr:7878',
-    sonarr: 'http://sonarr:8989',
-    prowlarr: 'http://prowlarr:9696',
-    bazarr: 'http://bazarr:6767',
-    cinesync: 'http://cinesync:8080',
-    placeholdarr: 'http://placeholdarr:9090'
-  };
-
-  const serviceDescriptions = {
-    radarr: 'Radarr: Movie collection manager for Usenet and BitTorrent',
-    sonarr: 'Sonarr: TV series collection manager',
-    prowlarr: 'Prowlarr: Indexer manager/proxy for torrent trackers and Usenet indexers',
-    bazarr: 'Bazarr: Subtitle management for Radarr and Sonarr',
-    cinesync: 'CineSync: Media library management for Movies & TV shows',
-    placeholdarr: 'Placeholdarr: Creates placeholder files for undownloaded media'
-  };
-
-  const serviceLogos = {
-    radarr: radarrLogo,
-    sonarr: sonarrLogo,
-    prowlarr: prowlarrLogo,
-    bazarr: bazarrLogo,
-    cinesync: cinesyncLogo,
-    placeholdarr: placeholdarrLogo
-  };
 
   const [config, setConfig] = React.useState({
     // Core Media Server
@@ -370,10 +287,6 @@ function App() {
       enablePlexUpdate: false,
       plexUrl: '',
       plexToken: '',
-      cinesyncIp: '0.0.0.0',
-      cinesyncAuthEnabled: true,
-      cinesyncUsername: 'admin',
-      cinesyncPassword: 'admin',
       mediahubAutoStart: true,
       rtmAutoStart: false,
       fileOperationsAutoMode: true,
@@ -382,9 +295,6 @@ function App() {
       dbRetryDelay: 1.0,
       dbBatchSize: 1000,
       dbMaxWorkers: 20,
-      // Backend config fields
-      origin_directory: '/opt/surge/CineSync/Origin',
-      destination_directory: '/opt/surge/CineSync/Destination',
       port: 8080,
       host: '0.0.0.0',
       username: 'admin',
@@ -686,62 +596,15 @@ function App() {
     }
   }, [config, contentEnhancement, activeStep]);
 
-  const [testResult, setTestResult] = React.useState('');
-  const [deployResult, setDeployResult] = React.useState('');
-
   const handleNext = () => setActiveStep((prev) => prev + 1);
-  // Custom next handler for media server step
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
-  const handleChange = (e) => {
-    setConfig({ ...config, [e.target.name]: e.target.value });
-  };
-
-  const handleTest = async (service) => {
-    setTestResult('Testing...');
-    let url = '', api_key = '';
-    if (service === 'prowlarr') {
-      url = config.prowlarrUrl; api_key = config.prowlarrApiKey;
-    } else if (service === 'radarr') {
-      url = config.radarrUrl; api_key = config.radarrApiKey;
-    } else if (service === 'sonarr') {
-      url = config.sonarrUrl; api_key = config.sonarrApiKey;
-    }
-    try {
-      const resp = await fetch('/api/test_connection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, api_key })
-      });
-      const text = await resp.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('Failed to parse JSON from /api/test_connection:', text, e);
-        setTestResult('Error: Invalid JSON response from backend. Value: ' + text + '\nError: ' + e.message);
-        return;
-      }
-      setTestResult(data.status === 'success' ? 'Connection successful!' : 'Failed: ' + (data.error || data.output));
-    } catch (e) {
-      setTestResult('Error: ' + e.message);
-    }
-  };
-
-  const handleSave = async () => {
-    localStorage.setItem('surge-setup', JSON.stringify(config));
-    await fetch('/api/save_config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
-    });
-  };
-
   // (Removed: checkDaemonStatus, generateDaemonToken, handleLogin,
-  // handleLogout, handleDeploy, password-reset / email-verification
-  // screen routing, and the !isAuthenticated → <AuthComponent /> branch.
-  // All depended on backends that no longer exist. The current deploy
-  // model is the bundle download flow in deployBundle.js.)
+  // handleLogout, handleDeploy, handleTest/handleSave, password-reset /
+  // email-verification screen routing, and the !isAuthenticated →
+  // <AuthComponent /> branch. All depended on backends that no longer
+  // exist. The current deploy model is the bundle download flow in
+  // deployBundle.js.)
 
   return (
     <>
@@ -955,7 +818,6 @@ ${paletteToCssVars(palettes.light)}
             )}
             {activeStep === 3 && (
               <AdditionalServicesStep
-                contentEnhancementList={contentEnhancementList}
                 contentEnhancement={contentEnhancement}
                 setContentEnhancement={setContentEnhancement}
                 showKometaAdvanced={showKometaAdvanced}
@@ -966,7 +828,6 @@ ${paletteToCssVars(palettes.light)}
                 setShowPlaceholdarrAdvanced={setShowPlaceholdarrAdvanced}
                 config={config}
                 setConfig={setConfig}
-                handleChange={handleChange}
               />
             )}
             {activeStep === 4 && (

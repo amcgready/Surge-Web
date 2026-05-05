@@ -16,13 +16,15 @@
     "no-debugger": "error",
     "eqeqeq": ["error", "smart"],
     "prefer-const": "warn",
-    "no-var": "error"
+    "no-var": "error",
+    "no-template-curly-in-string": "off"
   },
   "overrides": [
     {
       "files": ["**/*.test.js", "**/*.test.jsx", "**/__tests__/**"],
       "rules": {
-        "no-console": "off"
+        "no-console": "off",
+        "jest/no-conditional-expect": "off"
       }
     }
   ]

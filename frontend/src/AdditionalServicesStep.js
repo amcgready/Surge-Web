@@ -10,6 +10,8 @@ import cinesyncLogo from './assets/service-logos/cinesync.png';
 import flaresolverrLogo from './assets/service-logos/flaresolverr.svg';
 import decypharrLogo from './assets/service-logos/decypharr.png';
 import gapsLogo from './assets/service-logos/gaps.png';
+import gluetunLogo from './assets/service-logos/gluetun.png';
+import pangolinLogo from './assets/service-logos/pangolin.png';
 import kometaLogo from './assets/service-logos/kometa.png';
 import mdblistarrLogo from './assets/service-logos/mdblistarr.png';
 import nzbdavLogo from './assets/service-logos/nzbdav.png';
@@ -2028,7 +2030,7 @@ export const serviceMeta = {
   newt: {
     name: 'Pangolin (Newt)',
     desc: 'Tunnel to Pangolin reverse proxy — no port forwarding',
-    logo: null,
+    logo: pangolinLogo,
     category: 'networking',
     repo: 'https://github.com/fosrl/newt',
     compose: {
@@ -2065,7 +2067,7 @@ export const serviceMeta = {
   gluetun: {
     name: 'Gluetun',
     desc: 'Per-container VPN routing (Mullvad/ProtonVPN/etc.)',
-    logo: null,
+    logo: gluetunLogo,
     category: 'networking',
     repo: 'https://github.com/qdm12/gluetun',
     compose: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Tooltip, Button, Divider } from '@mui/material';
+import { Box, Typography, Tooltip } from '@mui/material';
 // ...import any other components, hooks, or assets needed for step 1...
 
 // Plex claim tokens are valid for ~4 minutes from generation. We can't
