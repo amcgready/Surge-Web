@@ -225,86 +225,25 @@ function App() {
       proxyUsername: '',
       proxyPassword: '',
     },
-    // Media Automation - CineSync settings
+    // Media Automation - CineSync settings.
+    //
+    // Only two fields are actually consumed across the codebase:
+    // these toggles drive CineSync's .env (ANIME_SEPARATION /
+    // 4K_SEPARATION) AND Plex's library auto-creation (the
+    // configure-plex.py post-deploy script gates anime/4K library
+    // creation on them). Both default off so CineSync only creates
+    // Movies/ and Shows/ unless the user opts into the extras via
+    // the "CineSync settings" panel on the Service Selection step.
+    //
+    // Everything else that used to live in this block (admin
+    // username/password, host/port, SSL knobs, rclone mount toggles,
+    // database tuning, etc.) was auth-era scaffolding for a Flask
+    // backend that no longer exists. Those fields were never piped
+    // into any compose template or fetch/configure script — they
+    // just bloated the persisted wizard state. Removed wholesale.
     cinesyncSettings: {
-      webuiPort: 5173,
-      apiPort: 8082,
-      webdavPort: 8082,
-      apiKey: 'surgestack',
-      authMethod: 'Basic',
-      logLevel: 'Info',
-      branch: 'master',
-      launchBrowser: 'false',
-      sourceDir: '',
-      useSourceStructure: false,
-      cinesyncLayout: true,
-      // Both default off so CineSync only creates Movies/ and Shows/
-      // by default. Users opt into anime/4K via the Service Selection
-      // step's "CineSync settings" panel; the toggle drives both
-      // CineSync's .env (ANIME_SEPARATION/4K_SEPARATION) AND Plex's
-      // library auto-creation (anime/4K libraries gated on these flags).
       animeSeparation: false,
       fourKSeparation: false,
-      kidsSeparation: false,
-      customShowFolder: '',
-      custom4kShowFolder: '',
-      customAnimeShowFolder: '',
-      customMovieFolder: '',
-      custom4kMovieFolder: '',
-      customAnimeMovieFolder: '',
-      customKidsMovieFolder: '',
-      customKidsShowFolder: '',
-      showResolutionStructure: false,
-      movieResolutionStructure: false,
-      cinesyncIp: '0.0.0.0',
-      cinesyncAuthEnabled: true,
-      cinesyncUsername: 'admin',
-      cinesyncPassword: 'admin',
-      origin_directory: '/opt/surge/CineSync/Origin',
-      destination_directory: '/opt/surge/CineSync/Destination',
-      rcloneMount: false,
-      mountCheckInterval: 30,
-      tmdbApiKey: '',
-      language: 'English',
-      animeScan: false,
-      tmdbFolderId: false,
-      imdbFolderId: false,
-      tvdbFolderId: false,
-      renameEnabled: false,
-      mediaInfoParser: false,
-      renameTags: '',
-      mediaInfoTags: '',
-      movieCollectionEnabled: false,
-      relativeSymlink: false,
-      maxCores: 1,
-      maxProcesses: 15,
-      skipExtrasFolder: true,
-      junkMaxSizeMb: 5,
-      allowedExtensions: '.mp4,.mkv,.srt,.avi,.mov,.divx,.strm',
-      skipAdultPatterns: true,
-      sleepTime: 60,
-      symlinkCleanupInterval: 600,
-      enablePlexUpdate: false,
-      plexUrl: '',
-      plexToken: '',
-      mediahubAutoStart: true,
-      rtmAutoStart: false,
-      fileOperationsAutoMode: true,
-      dbThrottleRate: 100,
-      dbMaxRetries: 10,
-      dbRetryDelay: 1.0,
-      dbBatchSize: 1000,
-      dbMaxWorkers: 20,
-      port: 8080,
-      host: '0.0.0.0',
-      username: 'admin',
-      password: 'surge',
-      enable_ssl: false,
-      ssl_cert: '',
-      ssl_key: '',
-      webhook_url: '',
-      extra_env: {},
-      extra_args: '',
     },
     // Media Automation - Placeholdarr settings
     placeholdarrSettings: {
@@ -670,39 +609,32 @@ ${paletteToCssVars(palettes.light)}
       >
         <Container style={{ width: '100%', maxWidth: '1200px', background: 'var(--surge-app-bg)', color: 'var(--surge-text-primary)', borderRadius: 12, boxShadow: 'none', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
           <Box>
+            {/* Top toolbar — badge on the far left, controls on the
+                far right, sitting at the top of the container above
+                the centered logo + title block below. */}
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Box flex={1}>
-                {/* Beta badge — outline-style chip in the brand teal,
-                    matching the rest of the chrome. Placed in the
-                    left-third flex slot opposite the header buttons
-                    on the right; doesn't wrap onto its own line on
-                    narrow viewports because it's flex-bound. */}
-                <Box
-                  component="span"
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 1,
-                    border: '1px solid var(--surge-brand)',
-                    color: 'var(--surge-brand)',
-                    background: 'rgba(7,147,143,0.08)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  Beta
-                </Box>
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: 1,
+                  border: '1px solid var(--surge-brand)',
+                  color: 'var(--surge-brand)',
+                  background: 'rgba(7,147,143,0.08)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  fontFamily: 'monospace',
+                }}
+              >
+                Beta
               </Box>
-              <Box flex={1} textAlign="center">
-                <SurgeLogo />
-              </Box>
-              <Box flex={1} textAlign="right" sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                 <Tooltip title="Settings — export / import" placement="bottom">
                   <Button
                     onClick={() => setSettingsOpen(true)}
@@ -783,6 +715,12 @@ ${paletteToCssVars(palettes.light)}
                   </Button>
                 </Tooltip>
               </Box>
+            </Box>
+            {/* Logo + page title, centered, on their own row below
+                the toolbar so they aren't competing for space with
+                the badge/controls on narrow viewports. */}
+            <Box textAlign="center">
+              <SurgeLogo />
             </Box>
             <Typography variant="h4" align="center" gutterBottom style={{ color: 'var(--surge-text-primary)' }}>
               Surge Setup
