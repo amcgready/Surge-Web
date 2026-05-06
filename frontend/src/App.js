@@ -671,7 +671,34 @@ ${paletteToCssVars(palettes.light)}
         <Container style={{ width: '100%', maxWidth: '1200px', background: 'var(--surge-app-bg)', color: 'var(--surge-text-primary)', borderRadius: 12, boxShadow: 'none', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
           <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Box flex={1} />
+              <Box flex={1}>
+                {/* Beta badge — outline-style chip in the brand teal,
+                    matching the rest of the chrome. Placed in the
+                    left-third flex slot opposite the header buttons
+                    on the right; doesn't wrap onto its own line on
+                    narrow viewports because it's flex-bound. */}
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 1,
+                    py: 0.25,
+                    borderRadius: 1,
+                    border: '1px solid var(--surge-brand)',
+                    color: 'var(--surge-brand)',
+                    background: 'rgba(7,147,143,0.08)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  Beta
+                </Box>
+              </Box>
               <Box flex={1} textAlign="center">
                 <SurgeLogo />
               </Box>
