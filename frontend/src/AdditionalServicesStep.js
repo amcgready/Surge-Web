@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Typography, Tooltip, Chip, Stack, Switch, FormControlLabel, TextField, InputAdornment, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Typography, Tooltip, Chip, Stack, Switch, Checkbox, FormControlLabel, TextField, InputAdornment, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material';
 import { generateComposePreview } from './composePreview';
+import { mediaServerMeta } from './mediaServerMeta';
 import {
   loadPresets, savePresets, buildPresetFromCurrent, upsertPreset, deletePreset,
 } from './userPresets';
@@ -324,6 +325,754 @@ export const categories = [
   { key: 'monitoring', label: 'Monitoring',           icon: '📊' },
   { key: 'networking', label: 'Networking & VPN',     icon: '🌐' },
 ];
+
+// ---------------------------------------------------------------------
+// Existing-services panel
+// ---------------------------------------------------------------------
+//
+// Sits at the top of the Service Selection step so users with an
+// existing stack can declare what they already have running BEFORE
+// picking new services. Each entry stores:
+//   { external: true, url, apiKey }
+// in config.externalServices.<key>. The compose renderer skips
+// services flagged external (no container, no secrets) and the
+// fromService / fromServiceSecret marker resolvers fall back to the
+// user-provided url/apiKey for any new service that depends on them.
+//
+// Services eligible to be marked external. Built dynamically from the
+// schema so any service the user might already have running can be
+// declared — even ones without HTTP APIs (Kometa, Posterizarr) can
+// be marked external if the user has them scheduled elsewhere.
+//
+// Two services are intentionally excluded:
+//   - newt: it's the Pangolin tunnel agent itself; "external Newt"
+//     would mean running Pangolin against another tunnel, which
+//     defeats the point.
+//   - gluetun: it wraps other containers' network namespaces, so
+//     "external Gluetun" doesn't fit the model.
+//
+// kind drives placeholder hints + the userId field for Jellyfin/Emby:
+//   - 'media' → token-shaped auth (Plex token / Jellyfin/Emby API key + userId)
+//   - 'service' → standard URL + API key
+//   - 'task' → no HTTP API by default; user can still supply a URL/key
+//     if they've configured one (Kometa /webhooks etc.)
+const SERVICES_WITH_HTTP_API = new Set([
+  // *arr family + downloaders + indexers + requests
+  'bazarr', 'boxarr', 'cinesync', 'decypharr', 'episeerr',
+  'flaresolverr', 'mdblistarr', 'nzbdav', 'prowlarr', 'pulsarr',
+  'radarr', 'rdt-client', 'sabnzbd', 'seasonarr', 'seerr',
+  'sonarr', 'tautulli', 'zilean', 'zurg',
+]);
+const SCHEDULED_TASKS = new Set([
+  // One-shot / scheduled-task services without persistent HTTP APIs.
+  // Marking them external is mostly informational; URL/key fields are
+  // still shown but optional.
+  'kometa', 'posterizarr', 'gaps',
+]);
+
+function buildEligibleList(serviceMeta, mediaServerMeta) {
+  const out = [];
+  // Media servers first.
+  for (const [key, meta] of Object.entries(mediaServerMeta || {})) {
+    out.push({ key, name: meta.name || key, kind: 'media',
+               category: 'mediaServer' });
+  }
+  // Additional services, grouped by their schema category.
+  for (const [key, meta] of Object.entries(serviceMeta || {})) {
+    if (key === 'newt' || key === 'gluetun') continue;
+    let kind = 'service';
+    if (SCHEDULED_TASKS.has(key)) kind = 'task';
+    else if (!SERVICES_WITH_HTTP_API.has(key)) kind = 'task';
+    out.push({
+      key,
+      name: meta.name || key,
+      kind,
+      category: meta.category || 'other',
+    });
+  }
+  return out;
+}
+
+// Display label + order for the category headers in the panel.
+const EXTERNAL_CATEGORY_ORDER = [
+  { key: 'mediaServer', label: 'Media servers' },
+  { key: 'media',       label: 'Media management' },
+  { key: 'indexers',    label: 'Indexers' },
+  { key: 'downloads',   label: 'Download clients' },
+  { key: 'debrid',      label: 'Debrid & storage' },
+  { key: 'requests',    label: 'Requests' },
+  { key: 'metadata',    label: 'Metadata & posters' },
+  { key: 'monitoring',  label: 'Monitoring' },
+  { key: 'other',       label: 'Other' },
+];
+
+function ExistingServicesPanel({ config, setConfig }) {
+  const [open, setOpen] = React.useState(false);
+  const ext = config?.externalServices || {};
+  const enabledCount = Object.values(ext).filter((e) => e?.external).length;
+  // Build the eligible list lazily — serviceMeta is exported later in
+  // this same module, so we read it via the closure rather than at
+  // module-load time.
+  const eligible = React.useMemo(
+    () => buildEligibleList(serviceMeta, mediaServerMeta),
+    [],
+  );
+  const groupedEligible = React.useMemo(() => {
+    const byCat = {};
+    for (const svc of eligible) {
+      if (!byCat[svc.category]) byCat[svc.category] = [];
+      byCat[svc.category].push(svc);
+    }
+    // Sort within each category by name.
+    for (const cat of Object.keys(byCat)) {
+      byCat[cat].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return byCat;
+  }, [eligible]);
+
+  const update = (key, patch) => {
+    setConfig((prev) => ({
+      ...prev,
+      externalServices: {
+        ...(prev?.externalServices || {}),
+        [key]: {
+          ...(prev?.externalServices?.[key] || {}),
+          ...patch,
+        },
+      },
+    }));
+  };
+
+  return (
+    <Box sx={{
+      mb: 2,
+      border: '1px solid var(--surge-border-subtle)',
+      borderRadius: 2,
+      background: 'var(--surge-card-bg-inner)',
+    }}>
+      {/* Header — always visible, clickable to expand */}
+      <Box
+        onClick={() => setOpen((v) => !v)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 2, py: 1.25,
+          cursor: 'pointer',
+          '&:hover': { background: 'rgba(7,147,143,0.05)' },
+          '&:focus-visible': {
+            outline: '2px solid var(--surge-brand)',
+            outlineOffset: -2,
+          },
+        }}
+      >
+        <Box sx={{ color: 'var(--surge-brand)', fontSize: 16 }}>
+          {open ? '▾' : '▸'}
+        </Box>
+        <Typography style={{
+          color: 'var(--surge-text-primary)', fontSize: 13, fontWeight: 600,
+          letterSpacing: 0.3, textTransform: 'uppercase',
+        }}>
+          Existing infrastructure
+        </Typography>
+        {enabledCount > 0 && (
+          <Chip
+            size="small"
+            label={`${enabledCount} marked external`}
+            sx={{
+              ml: 1,
+              background: 'transparent',
+              color: 'var(--surge-accent)',
+              border: '1px solid var(--surge-accent)',
+              fontSize: 11,
+            }}
+          />
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Typography style={{
+          color: 'var(--surge-text-dim)', fontSize: 12, fontStyle: 'italic',
+        }}>
+          {open ? '' : 'Already running these? Click to declare them.'}
+        </Typography>
+      </Box>
+
+      {open && (
+        <Box sx={{ px: 2, pb: 2 }}>
+          <Typography style={{
+            color: 'var(--surge-text-muted)', fontSize: 12, marginBottom: 12,
+          }}>
+            Mark any service you already have running outside Surge. The
+            wizard will exclude it from the deploy bundle and wire any
+            new services you add (Bazarr, Episeerr, etc.) to your existing
+            instance using the URL and API key you provide here.
+          </Typography>
+
+          {/* Step 1: dense checkbox grid grouped by category. Pick
+              what you have running — that's it. Connection details
+              for the marked services live in their own section
+              below, so the picker stays compact. */}
+          {EXTERNAL_CATEGORY_ORDER.map((cat) => {
+            const services = groupedEligible[cat.key];
+            if (!services || services.length === 0) return null;
+            return (
+              <Box key={cat.key} sx={{ mb: 1.25 }}>
+                <Typography style={{
+                  color: 'var(--surge-text-muted)', fontSize: 11,
+                  fontWeight: 600, letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  marginBottom: 4,
+                }}>
+                  {cat.label}
+                </Typography>
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                  gap: 0.25,
+                }}>
+                  {services.map((svc) => {
+                    const isExt = !!ext[svc.key]?.external;
+                    return (
+                      <FormControlLabel
+                        key={svc.key}
+                        sx={{
+                          m: 0,
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: 0.5,
+                          background: isExt ? 'rgba(121,234,255,0.08)' : 'transparent',
+                          '&:hover': {
+                            background: isExt
+                              ? 'rgba(121,234,255,0.14)'
+                              : 'rgba(7,147,143,0.06)',
+                          },
+                        }}
+                        control={
+                          <Checkbox
+                            checked={isExt}
+                            onChange={(e) => update(svc.key, { external: e.target.checked })}
+                            size="small"
+                            sx={{
+                              p: 0.5,
+                              color: 'var(--surge-text-muted)',
+                              '&.Mui-checked': { color: 'var(--surge-brand)' },
+                            }}
+                          />
+                        }
+                        label={
+                          <Typography style={{
+                            color: 'var(--surge-text-primary)', fontSize: 13,
+                          }}>
+                            {svc.name}
+                          </Typography>
+                        }
+                      />
+                    );
+                  })}
+                </Box>
+              </Box>
+            );
+          })}
+
+          {/* Step 2: connection details — only rendered for the
+              services the user actually checked, so this section
+              stays empty (and short) until needed. Each row is a
+              single horizontal flex strip: name + URL + API key
+              (+ userId for Jellyfin/Emby) + test button. */}
+          {eligible.some((svc) => ext[svc.key]?.external) && (
+            <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid var(--surge-border-subtle)' }}>
+              <Typography style={{
+                color: 'var(--surge-text-muted)', fontSize: 11,
+                fontWeight: 600, letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}>
+                Connection details
+              </Typography>
+              <Stack spacing={1}>
+                {eligible.filter((svc) => ext[svc.key]?.external).map((svc) => {
+                  const entry = ext[svc.key] || {};
+                  return (
+                    <Box
+                      key={svc.key}
+                      sx={{
+                        border: '1px solid var(--surge-border-subtle)',
+                        borderRadius: 1,
+                        p: 1,
+                        background: 'rgba(121,234,255,0.04)',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                        <Typography style={{
+                          color: 'var(--surge-text-primary)', fontSize: 13,
+                          fontWeight: 600,
+                          minWidth: 110,
+                        }}>
+                          {svc.name}
+                        </Typography>
+                        <Box sx={{ flex: '1 1 220px' }}>
+                          <input
+                            aria-label={`${svc.name} external URL`}
+                            value={entry.url || ''}
+                            onChange={(e) => update(svc.key, { url: e.target.value })}
+                            placeholder={
+                              svc.kind === 'media'
+                                ? 'http://192.168.1.10:32400'
+                                : 'http://192.168.1.10:8989'
+                            }
+                            style={{
+                              width: '100%',
+                              background: 'var(--surge-input-bg)',
+                              color: 'var(--surge-text-primary)',
+                              border: '1px solid var(--surge-border)',
+                              borderRadius: 4,
+                              padding: 6,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            }}
+                          />
+                        </Box>
+                        <Box sx={{ flex: '1 1 200px' }}>
+                          <input
+                            aria-label={`${svc.name} external API key`}
+                            type="password"
+                            value={entry.apiKey || ''}
+                            onChange={(e) => update(svc.key, { apiKey: e.target.value })}
+                            placeholder={
+                              svc.kind === 'media'
+                                ? 'API token / Plex token'
+                                : 'API key (Settings → General)'
+                            }
+                            style={{
+                              width: '100%',
+                              background: 'var(--surge-input-bg)',
+                              color: 'var(--surge-text-primary)',
+                              border: '1px solid var(--surge-border)',
+                              borderRadius: 4,
+                              padding: 6,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            }}
+                          />
+                        </Box>
+                        {(svc.key === 'jellyfin' || svc.key === 'emby') && (
+                          <Box sx={{ flex: '1 1 160px' }}>
+                            <input
+                              aria-label={`${svc.name} external user ID`}
+                              value={entry.userId || ''}
+                              onChange={(e) => update(svc.key, { userId: e.target.value })}
+                              placeholder="User ID (auto on test)"
+                              style={{
+                                width: '100%',
+                                background: 'var(--surge-input-bg)',
+                                color: 'var(--surge-text-primary)',
+                                border: '1px solid var(--surge-border)',
+                                borderRadius: 4,
+                                padding: 6,
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                              }}
+                            />
+                          </Box>
+                        )}
+                        <Box sx={{ flex: '0 0 auto' }}>
+                          <ExternalConnectionTester
+                            svcKey={svc.key}
+                            kind={svc.kind}
+                            entry={entry}
+                            onUserIdDiscovered={(uid) => update(svc.key, { userId: uid })}
+                          />
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
+          )}
+
+          {/* Auto-detect — probes common LAN URLs for the eligible
+              services. Only Plex/Jellyfin/Emby return readable
+              responses (they serve CORS); *arr apps fail with CORS
+              but at least confirm "something is listening on this
+              port", which is the most useful signal we can get
+              from a static SPA without a backend. */}
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px dashed var(--surge-border-subtle)' }}>
+            <ExternalAutoDetect config={config} setConfig={setConfig} />
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+
+// ---------------------------------------------------------------------
+// Test connection — per-service browser-side reachability check.
+//
+// Plex / Jellyfin / Emby allow CORS for their auth endpoints, so we
+// can authenticate and surface a real "key works" / "rejected" result.
+// Plus we read the userId for Jellyfin/Emby and bubble it back up to
+// the parent so the field auto-fills.
+//
+// *arr apps (Sonarr / Radarr / Prowlarr / Bazarr / Tautulli /
+// SABnzbd) reject browser CORS for /api/* — the auth check has to
+// happen on the deploy host. We do a `mode: 'no-cors'` GET as a
+// liveness probe; "opaque response" → port is open, server is
+// listening, but we can't tell whether auth succeeded. Better than
+// nothing.
+// ---------------------------------------------------------------------
+function ExternalConnectionTester({ svcKey, kind, entry, onUserIdDiscovered }) {
+  const [status, setStatus] = React.useState(null); // null|testing|ok|warn|fail
+  const [message, setMessage] = React.useState('');
+
+  const handleTest = async () => {
+    if (!entry?.url || !entry?.apiKey) {
+      setStatus('fail');
+      setMessage('Fill in URL and API key first.');
+      return;
+    }
+    setStatus('testing');
+    setMessage('');
+    const url = entry.url.replace(/\/+$/, '');
+    try {
+      // Plex: /identity returns server info; auth via X-Plex-Token.
+      if (svcKey === 'plex') {
+        const res = await fetch(`${url}/identity?X-Plex-Token=${encodeURIComponent(entry.apiKey)}`,
+                                { headers: { Accept: 'application/json' } });
+        if (!res.ok) {
+          setStatus('fail');
+          setMessage(`Plex rejected: HTTP ${res.status}`);
+          return;
+        }
+        setStatus('ok');
+        setMessage('Plex token works.');
+        return;
+      }
+      // Jellyfin / Emby: /Users with X-Emby-Token returns the user list.
+      if (svcKey === 'jellyfin' || svcKey === 'emby') {
+        const tokenHeader = svcKey === 'jellyfin'
+          ? { 'X-Emby-Token': entry.apiKey }
+          : { 'X-Emby-Token': entry.apiKey };
+        const res = await fetch(`${url}/Users`, { headers: { ...tokenHeader, Accept: 'application/json' } });
+        if (!res.ok) {
+          setStatus('fail');
+          setMessage(`${svcKey} rejected: HTTP ${res.status}`);
+          return;
+        }
+        const users = await res.json();
+        // Pick the first admin (or just the first user) as the working userId.
+        const admin = users.find?.((u) => u?.Policy?.IsAdministrator) || users[0];
+        if (admin?.Id) {
+          onUserIdDiscovered?.(admin.Id);
+          setStatus('ok');
+          setMessage(`Connected. Auto-filled user ID: ${admin.Id.slice(0, 8)}…`);
+        } else {
+          setStatus('warn');
+          setMessage('Connected but no users returned — check the API key has admin access.');
+        }
+        return;
+      }
+      // *arr apps + SABnzbd + Tautulli: CORS blocks reading the
+      // response, so we can't validate auth. Fall back to a reach-
+      // ability probe in no-cors mode — if it doesn't throw, the
+      // server is responding on that URL.
+      try {
+        await fetch(url, { mode: 'no-cors' });
+        setStatus('warn');
+        setMessage(
+          `Server reachable, but ${kind === 'arr' ? '*arr' : svcKey} APIs ` +
+          `block browser CORS so we can't verify the key from here. ` +
+          `Auth will be checked at deploy time.`,
+        );
+      } catch (err) {
+        setStatus('fail');
+        setMessage(`Couldn't reach ${url} — ${err.message || 'network error'}`);
+      }
+    } catch (err) {
+      setStatus('fail');
+      setMessage(`Test failed: ${err.message || String(err)}`);
+    }
+  };
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+      <Button
+        size="small"
+        onClick={handleTest}
+        disabled={status === 'testing'}
+        variant="outlined"
+        sx={{
+          color:        'var(--surge-brand)',
+          borderColor:  'var(--surge-brand)',
+          textTransform: 'none',
+          fontSize: 12,
+        }}
+      >
+        {status === 'testing' ? 'Testing…' : 'Test connection'}
+      </Button>
+      {status === 'ok' && (
+        <Typography style={{ color: 'var(--surge-success)', fontSize: 11 }}>
+          ✓ {message}
+        </Typography>
+      )}
+      {status === 'warn' && (
+        <Typography style={{ color: 'var(--surge-warning)', fontSize: 11 }}>
+          ⚠ {message}
+        </Typography>
+      )}
+      {status === 'fail' && (
+        <Typography style={{ color: 'var(--surge-error)', fontSize: 11 }}>
+          ✗ {message}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+
+// ---------------------------------------------------------------------
+// Auto-detect — probe common URLs for each eligible service.
+//
+// Tries a small list of high-likelihood URLs per service (localhost
+// + the page's hostname on each service's standard port). For Plex/
+// Jellyfin/Emby we can read the response and confirm it's actually
+// that service. For *arr apps we just check whether the connection
+// resolves; CORS prevents reading the body. The user still has to
+// paste the API key — discovery only fills in URL.
+// ---------------------------------------------------------------------
+const PROBE_PORTS = {
+  plex:     [32400],
+  jellyfin: [8096],
+  emby:     [8096, 8920],
+  sonarr:   [8989],
+  radarr:   [7878],
+  prowlarr: [9696],
+  sabnzbd:  [8080],
+  tautulli: [8181],
+};
+
+function ExternalAutoDetect({ config, setConfig }) {
+  const [running, setRunning] = React.useState(false);
+  const [results, setResults] = React.useState(null);
+  const [errors, setErrors]   = React.useState(null);
+  // User-supplied host. Defaults to "localhost" but the meaningful
+  // case is "my-nas.local", "192.168.1.50", or whatever the user's
+  // existing media server is actually reachable as. We can't auto-
+  // discover that from the browser — the browser doesn't know the
+  // user's LAN topology and Chrome's Private Network Access protections
+  // would block scanning anyway.
+  const [host, setHost] = React.useState('localhost');
+
+  const probe = async () => {
+    if (!host.trim()) return;
+    setRunning(true);
+    setResults(null);
+    setErrors(null);
+    const cleanHost = host.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    const found = {};
+    const tried = {};
+
+    for (const [svc, ports] of Object.entries(PROBE_PORTS)) {
+      tried[svc] = [];
+      for (const port of ports) {
+        const candidate = `http://${cleanHost}:${port}`;
+        tried[svc].push(candidate);
+        try {
+          // 3-second timeout per probe.
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 3000);
+          // no-cors: opaque response; resolves on any HTTP reply
+          // (including 401/403/404 from a real service), rejects on
+          // network-level failures (ECONNREFUSED, DNS, timeout).
+          await fetch(candidate, { mode: 'no-cors', signal: ctrl.signal });
+          clearTimeout(t);
+          found[svc] = candidate;
+          break;
+        } catch (_) {
+          // unreachable — try the next port for this service.
+        }
+      }
+    }
+    setResults(found);
+    if (Object.keys(found).length === 0) setErrors(tried);
+    setRunning(false);
+  };
+
+  const applyAll = () => {
+    if (!results) return;
+    setConfig((prev) => {
+      const next = { ...(prev?.externalServices || {}) };
+      for (const [svc, url] of Object.entries(results)) {
+        next[svc] = { ...(next[svc] || {}), external: true, url };
+      }
+      return { ...prev, externalServices: next };
+    });
+  };
+
+  const isHttpsContext = typeof window !== 'undefined'
+    && window.location.protocol === 'https:';
+
+  // Auto-detect is fundamentally incompatible with HTTPS pages —
+  // browsers block all http:// fetches as mixed content, and we'd
+  // need a backend proxy (with the privacy/security tradeoffs that
+  // come with it) to work around that. Show an explainer in place
+  // of the scan UI when running on https://surge.video so users
+  // understand why the button isn't there rather than concluding
+  // the feature is broken.
+  if (isHttpsContext) {
+    return (
+      <Alert severity="info" sx={{ fontSize: 12 }}>
+        <strong>Auto-detect isn't available on the hosted site.</strong>
+        <Box component="span" sx={{ display: 'block', mt: 0.5, color: 'var(--surge-text-secondary)' }}>
+          Browsers block HTTPS pages from probing plain <code>http://</code>{' '}
+          URLs on your LAN (mixed-content protection), so we can't reach
+          your services from here. Two options:
+        </Box>
+        <Box component="ul" sx={{
+          color: 'var(--surge-text-secondary)', m: 0, pl: 2.5, mt: 0.75, lineHeight: 1.7,
+          fontSize: 12,
+        }}>
+          <li>
+            <strong>Manual entry</strong> — flip the switches above for
+            each service you have running and paste the URL + API key.
+            Takes ~30 seconds per service.
+          </li>
+          <li>
+            <strong>Run the wizard locally</strong> for auto-detect:{' '}
+            <code>git clone</code> the repo,{' '}
+            <code>cd frontend &amp;&amp; npm install &amp;&amp; npm start</code>, then open{' '}
+            <code>http://localhost:3000</code>. Auto-detect works there
+            because it's an HTTP page. Generate the bundle locally and
+            run it on your deploy host as usual.
+          </li>
+        </Box>
+      </Alert>
+    );
+  }
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ flex: '1 1 220px', minWidth: 200 }}>
+          <Typography style={{
+            color: 'var(--surge-text-muted)', fontSize: 11, marginBottom: 4,
+          }}>
+            Host to scan (LAN IP, hostname, or "localhost")
+          </Typography>
+          <input
+            aria-label="Host to scan for services"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !running) probe(); }}
+            placeholder="192.168.1.50 or nas.local"
+            style={{
+              width: '100%',
+              background: 'var(--surge-input-bg)',
+              color: 'var(--surge-text-primary)',
+              border: '1px solid var(--surge-border)',
+              borderRadius: 4,
+              padding: 6,
+              fontSize: 12,
+              fontFamily: 'monospace',
+            }}
+          />
+        </Box>
+        <Button
+          size="small"
+          onClick={probe}
+          disabled={running || !host.trim()}
+          variant="outlined"
+          sx={{
+            color: 'var(--surge-accent)',
+            borderColor: 'var(--surge-accent)',
+            textTransform: 'none',
+            fontSize: 12,
+            mt: 2,
+          }}
+        >
+          {running ? 'Scanning…' : '🔍 Scan host'}
+        </Button>
+      </Box>
+      <Typography style={{ color: 'var(--surge-text-dim)', fontSize: 11, marginTop: 6 }}>
+        Tries each service on its standard port (Plex 32400, Sonarr 8989,
+        Radarr 7878, Prowlarr 9696, Jellyfin/Emby 8096, SABnzbd 8080,
+        Tautulli 8181). Doesn't validate API keys — paste those manually.
+      </Typography>
+
+      {results && (
+        <Box sx={{ mt: 1.5 }}>
+          {Object.keys(results).length === 0 ? (
+            <Box>
+              <Typography style={{ color: 'var(--surge-text-muted)', fontSize: 12, marginBottom: 8 }}>
+                Nothing reachable at <code>{host}</code> on any standard
+                service port. Common reasons:
+              </Typography>
+              <Box component="ul" sx={{
+                color: 'var(--surge-text-dim)', fontSize: 11,
+                m: 0, pl: 2, lineHeight: 1.7,
+              }}>
+                <li>Wrong host — try a LAN IP like <code>192.168.1.50</code></li>
+                <li>Services run on non-standard ports (mark them manually above)</li>
+                <li>Firewall blocking from this machine</li>
+                <li>Browser's Private Network Access blocking cross-network fetch</li>
+              </Box>
+              {errors && (
+                <Typography style={{
+                  color: 'var(--surge-text-dim)', fontSize: 10, marginTop: 8,
+                  fontFamily: 'monospace',
+                }}>
+                  Tried: {Object.values(errors).flat().join(', ')}
+                </Typography>
+              )}
+            </Box>
+          ) : (
+            <Box>
+              <Typography style={{ color: 'var(--surge-text-secondary)', fontSize: 12, marginBottom: 8 }}>
+                Found {Object.keys(results).length} reachable
+                {Object.keys(results).length === 1 ? ' service' : ' services'} on{' '}
+                <code>{host}</code>:
+              </Typography>
+              <Stack spacing={0.5} sx={{ mb: 1.5 }}>
+                {Object.entries(results).map(([svc, url]) => (
+                  <Typography key={svc} style={{
+                    color: 'var(--surge-text-primary)', fontSize: 12,
+                    fontFamily: 'monospace',
+                  }}>
+                    {svc} → {url}
+                  </Typography>
+                ))}
+              </Stack>
+              <Button
+                size="small"
+                onClick={applyAll}
+                variant="contained"
+                sx={{
+                  background: 'var(--surge-brand)',
+                  color: '#fff',
+                  textTransform: 'none',
+                  fontSize: 12,
+                  '&:hover': { background: '#065a57' },
+                }}
+              >
+                Mark all as external + fill URLs
+              </Button>
+            </Box>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 
 // Service metadata. Keys are lowercase identifiers used in
 // contentEnhancement state. logo is null when no asset exists yet.
@@ -2407,6 +3156,13 @@ export default function AdditionalServicesStep(props) {
         Service Selection
       </Typography>
 
+      {/* Existing-infrastructure declaration. Shown first so users
+          who already have services running can declare them up-front
+          before picking what to add. Each service listed here is
+          excluded from the deploy bundle and its URL/API key is
+          plumbed into any new service that depends on it. */}
+      <ExistingServicesPanel config={config} setConfig={setConfig} />
+
       {/* Quick-start presets — one-click bundles of services for the
           common deploy shapes. Additive: doesn't turn off anything the
           user already had enabled. Users who want a clean slate can
@@ -2712,13 +3468,14 @@ export default function AdditionalServicesStep(props) {
           const toggleTile = () =>
             setContentEnhancement((prev) => ({ ...prev, [key]: !prev[key] }));
           const isFocused = focusedKey === key;
+          const isExternal = !!config?.externalServices?.[key]?.external;
           return (
             <Tooltip key={key} title={tooltipText} placement="top">
               <Box
                 ref={(el) => { tileRefs.current[key] = el; }}
                 role="button"
                 tabIndex={0}
-                aria-label={`${meta.name}: ${enabled ? 'enabled' : 'disabled'} — click to toggle`}
+                aria-label={`${meta.name}: ${enabled ? 'enabled' : 'disabled'}${isExternal ? ' (external)' : ''} — click to toggle`}
                 aria-pressed={enabled}
                 onClick={toggleTile}
                 onKeyDown={(e) => {
@@ -2732,13 +3489,15 @@ export default function AdditionalServicesStep(props) {
                   opacity: enabled ? 1 : 0.4,
                   filter: enabled ? 'none' : 'grayscale(100%)',
                   borderRadius: 2,
+                  // Dashed border for external services: signals
+                  // "in your stack but not deployed by this bundle".
+                  border: isExternal
+                    ? '2px dashed var(--surge-accent)'
+                    : '2px solid transparent',
                   p: 0.5,
                   background: 'var(--surge-panel-bg)',
                   transition: 'all 0.2s',
                   position: 'relative',
-                  // Flash highlight when navigated-to from the
-                  // connection graph. Box-shadow + a brief scale
-                  // pulse makes the tile pop without yanking focus.
                   boxShadow: isFocused
                     ? '0 0 0 3px var(--surge-brand), 0 0 18px 4px rgba(7,147,143,0.6)'
                     : 'none',
@@ -2778,6 +3537,30 @@ export default function AdditionalServicesStep(props) {
                     }}
                   >
                     !
+                  </Box>
+                )}
+                {isExternal && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 2,
+                      left: 2,
+                      px: 0.5,
+                      py: 0.125,
+                      borderRadius: 0.5,
+                      backgroundColor: 'var(--surge-accent)',
+                      color: 'var(--surge-panel-bg)',
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: 0.5,
+                      lineHeight: 1.4,
+                      textTransform: 'uppercase',
+                      fontFamily: 'monospace',
+                      zIndex: 2,
+                    }}
+                    aria-hidden="true"
+                  >
+                    External
                   </Box>
                 )}
                 {meta.logo ? (

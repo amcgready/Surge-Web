@@ -28,10 +28,11 @@ import BundleInspector from './BundleInspector';
 //
 // Returns null if there's nothing connected (no scripts referencing
 // peers) — Mermaid would render an awkward empty graph otherwise.
-function buildMermaidGraph(preview) {
+function buildMermaidGraph(preview, externalServices) {
   if (!preview) return null;
   const edges = new Set(); // "from-->to" entries, deduped
   const nodes = new Set();
+  const ext = externalServices || {};
 
   const addEdge = (from, to) => {
     if (!from || !to || from === to) return;
@@ -43,7 +44,10 @@ function buildMermaidGraph(preview) {
   // Walk the resolved env values from the preview's scripts. Each
   // entry's value is a placeholder string like "<GENERATED:sonarr.apiKey>"
   // or "<RUNTIME-FETCH:plex.plexToken>" — we extract the target service.
-  const scanScripts = (scripts, consumerKey) => {
+  // We also catch <FROM-EXTERNAL:…> for the external-services mode
+  // (when no canonical mapping exists for the requested field) and
+  // raw URL values that match an external service's URL.
+  const scanScripts = (scripts) => {
     if (!scripts) return;
     for (const s of scripts) {
       const consumer = s.service;
@@ -54,9 +58,21 @@ function buildMermaidGraph(preview) {
         if (generated && generated[1] !== consumer) addEdge(consumer, generated[1]);
         const runtime = v.match(/^<RUNTIME-FETCH:([a-z0-9-]+)\./);
         if (runtime && runtime[1] !== consumer) addEdge(consumer, runtime[1]);
+        const external = v.match(/^<FROM-EXTERNAL:([a-z0-9-]+)\./);
+        if (external && external[1] !== consumer) addEdge(consumer, external[1]);
+        // Resolved external URLs/keys appear as plain strings now —
+        // walk the externalServices map and connect any consumer
+        // whose env value matches an external's url or apiKey.
+        for (const [extKey, info] of Object.entries(ext)) {
+          if (!info?.external) continue;
+          if ((info.url && v === info.url)
+              || (info.apiKey && v === info.apiKey)
+              || (info.userId && v === info.userId)) {
+            if (extKey !== consumer) addEdge(consumer, extKey);
+          }
+        }
       }
     }
-    // referenced even if no env shape — note we have an entry for it
     if (scripts) for (const s of scripts) nodes.add(s.service);
   };
   scanScripts(preview.fetchScripts);
@@ -72,21 +88,54 @@ function buildMermaidGraph(preview) {
       if (m1 && m1[1] !== consumer) addEdge(consumer, m1[1]);
       const m2 = line.match(/=<RUNTIME-FETCH:([a-z0-9-]+)\./);
       if (m2 && m2[1] !== consumer) addEdge(consumer, m2[1]);
+      const m3 = line.match(/=<FROM-EXTERNAL:([a-z0-9-]+)\./);
+      if (m3 && m3[1] !== consumer) addEdge(consumer, m3[1]);
+      // Resolved external value matches in plain env entries.
+      const eq = line.indexOf('=');
+      const rhs = eq >= 0 ? line.slice(eq + 1) : '';
+      for (const [extKey, info] of Object.entries(ext)) {
+        if (!info?.external) continue;
+        if ((info.url && rhs === info.url)
+            || (info.apiKey && rhs === info.apiKey)
+            || (info.userId && rhs === info.userId)) {
+          if (extKey !== consumer) addEdge(consumer, extKey);
+        }
+      }
     }
     nodes.add(consumer);
   }
 
+  // Make sure every external service the user marked appears as a
+  // node even if no resolved edge happened to land on it (defensive
+  // — keeps the visual model in sync with user intent).
+  for (const [extKey, info] of Object.entries(ext)) {
+    if (info?.external) nodes.add(extKey);
+  }
+
   if (edges.size === 0) return null;
 
-  // Build the Mermaid graph. flowchart LR (left-to-right) reads cleanly
-  // for service dependency graphs. Nodes are auto-shaped to rounded
-  // rectangles via the [text] syntax.
+  // flowchart LR (left-to-right) reads cleanly for service dependency
+  // graphs. External services use a stadium shape (`(["text"])`) plus
+  // a class with dashed accent stroke so they're visually distinct
+  // from the deployed-stack rounded rectangles.
   const lines = ['flowchart LR'];
+  const externalNodes = [];
   for (const n of [...nodes].sort()) {
-    lines.push(`  ${n}["${n}"]`);
+    if (ext[n]?.external) {
+      lines.push(`  ${n}(["${n}<br/>(external)"])`);
+      externalNodes.push(n);
+    } else {
+      lines.push(`  ${n}["${n}"]`);
+    }
   }
   for (const e of [...edges].sort()) {
     lines.push(`  ${e}`);
+  }
+  // Style declarations for external nodes — dashed accent border on
+  // a translucent fill.
+  if (externalNodes.length > 0) {
+    lines.push('  classDef external fill:#0d2a30,stroke:#79eaff,stroke-dasharray:5 4,color:#79eaff');
+    lines.push(`  class ${externalNodes.join(',')} external`);
   }
   return lines.join('\n');
 }
@@ -525,8 +574,8 @@ export default function ComposePreviewPanel({
     [lastBundleConfig, config],
   );
   const mermaidGraph = React.useMemo(
-    () => buildMermaidGraph(preview),
-    [preview],
+    () => buildMermaidGraph(preview, config?.externalServices),
+    [preview, config?.externalServices],
   );
   const [graphOpen, setGraphOpen] = React.useState(false);
 
@@ -1106,6 +1155,7 @@ export default function ComposePreviewPanel({
             <HealthcheckPanel
               enabled={Object.keys(preview.services)}
               mediaServer={config.mediaServer}
+              externalServices={config.externalServices}
             />
           </AccordionDetails>
         </Accordion>

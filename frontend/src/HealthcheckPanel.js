@@ -60,7 +60,7 @@ function StatusDot({ value, kind }) {
 }
 
 
-export default function HealthcheckPanel({ enabled, mediaServer }) {
+export default function HealthcheckPanel({ enabled, mediaServer, externalServices }) {
   const fileInputRef = React.useRef(null);
   const [statusDoc, setStatusDoc] = React.useState(null);
   const [parseError, setParseError] = React.useState(null);
@@ -68,8 +68,14 @@ export default function HealthcheckPanel({ enabled, mediaServer }) {
   const enabledList = React.useMemo(() => {
     const list = enabled.map((s) => (typeof s === 'string' ? s : s[0]));
     if (mediaServer && !list.includes(mediaServer)) list.unshift(mediaServer);
+    // Add any externally-marked services so the user sees their full
+    // stack here, with the "external" indicator distinguishing them.
+    const ext = externalServices || {};
+    for (const [key, info] of Object.entries(ext)) {
+      if (info?.external && !list.includes(key)) list.push(key);
+    }
     return list;
-  }, [enabled, mediaServer]);
+  }, [enabled, mediaServer, externalServices]);
 
   // Build a name → live-status map for O(1) lookup against the rendered
   // service list. Keys may be base service ('sonarr') or container
@@ -180,13 +186,19 @@ export default function HealthcheckPanel({ enabled, mediaServer }) {
           const hc    = getHealthcheck(key);
           const live  = liveByName[key];
           const url   = extractHttpEndpoint(hc?.command);
+          const extInfo = externalServices?.[key];
+          const isExternal = !!extInfo?.external;
 
           return (
             <Box
               key={key}
               sx={{
                 background:   'var(--surge-card-bg-inner)',
-                border:       '1px solid var(--surge-border-subtle)',
+                // External services get a dashed accent border so
+                // they read distinctly from the deployed stack.
+                border: isExternal
+                  ? '1px dashed var(--surge-accent)'
+                  : '1px solid var(--surge-border-subtle)',
                 borderRadius: 1,
                 p: 1.25,
               }}
@@ -197,7 +209,35 @@ export default function HealthcheckPanel({ enabled, mediaServer }) {
                 }}>
                   {meta?.name || key}
                 </Typography>
-                {live && (
+                {isExternal && (
+                  <>
+                    <Chip
+                      size="small"
+                      label="external"
+                      sx={{ background: 'transparent',
+                            color: 'var(--surge-accent)',
+                            border: '1px solid var(--surge-accent)' }}
+                    />
+                    {extInfo.url && (
+                      <Typography
+                        component="a"
+                        href={extInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: 'var(--surge-brand)',
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          textDecoration: 'none',
+                        }}
+                        sx={{ '&:hover': { textDecoration: 'underline' } }}
+                      >
+                        {extInfo.url} ↗
+                      </Typography>
+                    )}
+                  </>
+                )}
+                {live && !isExternal && (
                   <>
                     <Chip
                       size="small"
@@ -239,7 +279,15 @@ export default function HealthcheckPanel({ enabled, mediaServer }) {
                 )}
               </Box>
 
-              {hc ? (
+              {isExternal ? (
+                <Typography style={{
+                  color: 'var(--surge-text-dim)', fontSize: 11, marginTop: 4,
+                  fontStyle: 'italic',
+                }}>
+                  Managed externally — Surge isn't watching this service. Check
+                  it directly via the URL above.
+                </Typography>
+              ) : hc ? (
                 <Box sx={{ mt: 0.75 }}>
                   <Typography style={{
                     color: 'var(--surge-text-muted)', fontSize: 11,

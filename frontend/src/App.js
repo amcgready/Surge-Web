@@ -359,6 +359,17 @@ function App() {
     // Per-service "route through Gluetun" flags. Keys match
     // serviceMeta keys; default empty (off).
     vpnRoutedServices: {},
+    // Existing-services mode. For each service the user already has
+    // running outside Surge, this map carries:
+    //   { external: true, url: 'http://10.0.0.5:8989', apiKey: 'xxx' }
+    // The compose renderer skips emitting a container for these (no
+    // image, no secrets). Cross-service references — bazarr looking
+    // up sonarr's URL+key, etc. — resolve to the user-provided values
+    // instead of the in-bundle Docker DNS name + state.json secret.
+    // Same shape applies to media servers (plex/jellyfin/emby) so a
+    // user with a long-running Plex can add Surge-managed Bazarr +
+    // Tautulli without re-deploying their Plex.
+    externalServices: {},
     // Default to Unraid's nobody:users (99:100). Non-Unraid Docker hosts
     // typically want their own user's UID/GID — surfaced on the Storage
     // Config step. These flow into every container's env via the

@@ -84,9 +84,18 @@ export function generateComposePreview(config) {
 
 function enumerateEnabledServices(config) {
   const out = [];
+  const ext = config?.externalServices || {};
+
+  // Helper: services flagged as external aren't deployed by Surge
+  // (the user has them running already). Skip emitting a container,
+  // skip generating secrets, skip running fetch/configure scripts.
+  // Cross-references TO them still work — the marker resolver above
+  // turns fromService(ext-key).url into the user-provided URL.
+  const isExternal = (key) => !!ext?.[key]?.external;
 
   // Media server (one-of, picked from the wizard's Media Server step).
-  if (config?.mediaServer && mediaServerMeta[config.mediaServer]) {
+  if (config?.mediaServer && mediaServerMeta[config.mediaServer]
+      && !isExternal(config.mediaServer)) {
     out.push({
       key: config.mediaServer,
       meta: mediaServerMeta[config.mediaServer],
@@ -97,7 +106,7 @@ function enumerateEnabledServices(config) {
   // tile grid on the Additional Services step).
   const enhance = config?.contentEnhancement || {};
   for (const [key, enabled] of Object.entries(enhance)) {
-    if (enabled && serviceMeta[key]) {
+    if (enabled && serviceMeta[key] && !isExternal(key)) {
       out.push({ key, meta: serviceMeta[key] });
     }
   }
@@ -382,13 +391,45 @@ function renderEnvMarker(marker, serviceKey, meta, config) {
     return `<GENERATED:${serviceKey}.${marker.fromSecret}>`;
   }
 
-  // Cross-service secret reference.
+  // Cross-service secret reference. When the target is marked
+  // external (user has it running outside Surge), bypass the in-
+  // bundle secret pipeline and use the user-provided apiKey.
   if ('fromServiceSecret' in marker) {
+    const target = marker.fromServiceSecret;
+    const ext = config?.externalServices?.[target];
+    if (ext?.external) {
+      // For "apiKey"-shaped secrets the external apiKey IS the
+      // secret. Other secret fields aren't supported externally —
+      // fall through to the placeholder so the user notices.
+      if ((marker.secret || '').toLowerCase().includes('key')
+          || (marker.secret || '').toLowerCase().includes('token')) {
+        return ext.apiKey || `<FROM-EXTERNAL:${target}.apiKey>`;
+      }
+    }
     return `<GENERATED:${marker.fromServiceSecret}.${marker.secret}>`;
   }
 
   // Runtime-fetched value from another service's fetchScript.
+  // External target → resolve to the user-provided URL or apiKey
+  // directly. Field set actually used in the schema today:
+  //   plex.plexToken, jellyfin.apiKey, jellyfin.userId,
+  //   emby.apiKey, emby.userId. Plus implicit .url everywhere.
+  // .apiKey and .token aliases both map to ext.apiKey since users
+  // pasting "API key" into the wizard wouldn't know which.
   if ('fromService' in marker) {
+    const target = marker.fromService;
+    const ext    = config?.externalServices?.[target];
+    if (ext?.external) {
+      const field = (marker.field || '').toLowerCase();
+      if (field === 'url' && ext.url)              return ext.url;
+      if (field === 'apikey' && ext.apiKey)        return ext.apiKey;
+      if (field === 'token' && ext.apiKey)         return ext.apiKey;
+      if (field === 'plextoken' && ext.apiKey)     return ext.apiKey;
+      if (field === 'userid' && ext.userId)        return ext.userId;
+      // Unknown field on an external — surface placeholder so the
+      // user notices we couldn't fill it in.
+      return `<FROM-EXTERNAL:${target}.${marker.field}>`;
+    }
     return `<RUNTIME-FETCH:${marker.fromService}.${marker.field}>`;
   }
 

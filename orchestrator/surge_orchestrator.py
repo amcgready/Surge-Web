@@ -181,14 +181,43 @@ class Config:
         return self.media_server == key
 
     def enabled_services(self, manifest: Manifest) -> list[tuple[str, dict]]:
-        """[(key, meta), ...] for every service that's part of this deploy."""
+        """[(key, meta), ...] for every service that's part of THIS
+        deploy. Services flagged as `external` (the user already has
+        them running outside Surge) are skipped — no container, no
+        secrets, no fetch/configure scripts. The marker resolver
+        handles cross-references TO externals separately, returning
+        the user-provided URL/apiKey instead of the in-bundle Docker
+        DNS name + state.json secret."""
         out: list[tuple[str, dict]] = []
-        if self.media_server and manifest.media_server_meta.get(self.media_server):
+        if (self.media_server
+                and manifest.media_server_meta.get(self.media_server)
+                and not self.is_external(self.media_server)):
             out.append((self.media_server, manifest.media_server_meta[self.media_server]))
         for key, enabled in self.content_enhancement.items():
-            if enabled and manifest.service_meta.get(key):
+            if enabled and manifest.service_meta.get(key) and not self.is_external(key):
                 out.append((key, manifest.service_meta[key]))
         return out
+
+    def is_external(self, key: str) -> bool:
+        """True when the user marked `key` as already-running outside
+        Surge. Read from config.externalServices.<key>.external."""
+        ext = (self.raw.get("externalServices") or {}).get(key) or {}
+        return bool(ext.get("external"))
+
+    def external_info(self, key: str) -> dict:
+        """Return {url, apiKey, userId} for an external service, or
+        {} if not flagged external. userId is meaningful for
+        jellyfin/emby where the schema's fetchScript normally
+        captures it via /Users API; when the user runs those
+        externally they have to supply it explicitly."""
+        ext = (self.raw.get("externalServices") or {}).get(key) or {}
+        if not ext.get("external"):
+            return {}
+        return {
+            "url":    ext.get("url", ""),
+            "apiKey": ext.get("apiKey", ""),
+            "userId": ext.get("userId", ""),
+        }
 
 
 class State:
@@ -407,9 +436,23 @@ def resolve_env_marker(
             )
         return v
 
-    # Cross-service secret reference.
+    # Cross-service secret reference. Existing-services mode: if the
+    # target is flagged external, the user has it running outside
+    # Surge — bypass state.json and read the apiKey straight from
+    # config.externalServices.<key>.apiKey. Only key/token-shaped
+    # secrets are supported externally; anything else falls through
+    # and will surface the placeholder.
     if "fromServiceSecret" in marker:
-        v = state.get_secret(marker["fromServiceSecret"], marker["secret"])
+        target = marker["fromServiceSecret"]
+        if config.is_external(target):
+            secret_name = (marker.get("secret") or "").lower()
+            if "key" in secret_name or "token" in secret_name:
+                ext = config.external_info(target)
+                if ext.get("apiKey"):
+                    return ext["apiKey"]
+            # Field shape we don't know how to derive externally.
+            return f"<FROM-EXTERNAL:{target}.{marker['secret']}>"
+        v = state.get_secret(target, marker["secret"])
         if v is None:
             # The target service may not be enabled — fromServiceSecret
             # without a whenService gate is a schema bug we surface
@@ -424,7 +467,23 @@ def resolve_env_marker(
         return v
 
     # Runtime-fetched value from another service's fetchScript.
+    # Same external bypass as fromServiceSecret. .url and .apiKey/
+    # .token are the supported fields; anything else (custom
+    # fetchScript outputs) falls through to the placeholder so the
+    # gap is visible.
     if "fromService" in marker:
+        target = marker["fromService"]
+        if config.is_external(target):
+            ext = config.external_info(target)
+            field = (marker.get("field") or "").lower()
+            if field == "url" and ext.get("url"):
+                return ext["url"]
+            if field in ("apikey", "token", "plextoken") and ext.get("apiKey"):
+                return ext["apiKey"]
+            # Jellyfin/Emby userId — supplied by user alongside apiKey.
+            if field == "userid" and ext.get("userId"):
+                return ext["userId"]
+            return f"<FROM-EXTERNAL:{target}.{marker['field']}>"
         v = state.get_runtime(marker["fromService"], marker["field"])
         if v is not None:
             return v
